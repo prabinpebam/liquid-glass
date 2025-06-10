@@ -114,3 +114,130 @@ body, html {
     z-index: 1000;
     pointer-events: none;
 }
+
+/* Grid Controls Panel */
+.grid-controls {
+    position: fixed;
+    bottom: 50px; /* Match the 50px virtual margin */
+    left: 145px; /* Positioned after add button (75px) + button width (50px) + gap (20px) */
+    width: 280px;
+    height: 50px;
+    padding: 10px 20px;
+    border-radius: 25px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    
+    /* Remove glass effect - will be rendered in canvas */
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border: none;
+    box-shadow: none;
+}
+
+.grid-control-item {
+    display: flex;
+    align-items: center;
+}
+
+/* Toggle Switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 24px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(255, 255, 255, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    border-radius: 24px;
+    transition: 0.2s;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 2px;
+    bottom: 2px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+input:checked + .toggle-slider {
+    background-color: rgba(0, 122, 255, 0.6);
+    border-color: rgba(0, 122, 255, 0.8);
+}
+
+input:checked + .toggle-slider:before {
+    transform: translateX(26px);
+}
+
+/* Grid Spacing Slider */
+.grid-spacing-slider {
+    width: 120px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.3);
+    outline: none;
+    border: none;
+    cursor: pointer;
+}
+
+.grid-spacing-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+}
+
+.grid-spacing-slider::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    cursor: pointer;
+    border: none;
+}
+
+/* Glass Icons */
+.glass-icon {
+    position: fixed;
+    z-index: 15;
+    pointer-events: none;
+    opacity: 0.8;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
+}
+
+#add-image-icon {
+    width: 24px;
+    height: 24px;
+}
+
+#grid-icon {
+    width: 20px;
+    height: 20px;
+}

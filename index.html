@@ -14,69 +14,60 @@
     <div id="controls-pane">
         <h3 id="controls-title">
             <span class="drag-handle">⋮⋮</span>
-            Controls
+            Liquid Glass Controls
         </h3>
-
+        
         <div class="control-group">
-            <label for="shapeTypeSelector">Shape Type:</label>
-            <select id="shapeTypeSelector">
-                <option value="0" selected>Disk</option>
-                <option value="1">Rounded Rectangle</option>
-            </select>
-        </div>
-
-        <div id="diskControls">
-            <div class="control-group">
-                <label for="diskRadiusSlider">Disk Radius: <span id="diskRadiusValue"></span>px</label>
-                <input type="range" id="diskRadiusSlider" min="50" max="400" value="150">
-            </div>
-        </div>
-
-        <div id="rectControls" style="display: none;">
-            <div class="control-group">
-                <label for="rectWidthSlider">Rect Width: <span id="rectWidthValue"></span>px</label>
-                <input type="range" id="rectWidthSlider" min="50" max="600" value="300">
-            </div>
-            <div class="control-group">
-                <label for="rectHeightSlider">Rect Height: <span id="rectHeightValue"></span>px</label>
-                <input type="range" id="rectHeightSlider" min="50" max="400" value="200">
-            </div>
-            <div class="control-group">
-                <label for="rectCornerRadiusSlider">Corner Radius: <span id="rectCornerRadiusValue"></span>px</label>
-                <input type="range" id="rectCornerRadiusSlider" min="0" max="100" value="30">
-            </div>
+            <label for="rectWidthSlider">Width: <span id="rectWidthValue"></span>px</label>
+            <input type="range" id="rectWidthSlider" min="50" max="800" step="1" value="300">
         </div>
         
-        <hr>
-
+        <div class="control-group">
+            <label for="rectHeightSlider">Height: <span id="rectHeightValue"></span>px</label>
+            <input type="range" id="rectHeightSlider" min="50" max="600" step="1" value="200">
+        </div>
+        
+        <div class="control-group">
+            <label for="rectCornerRadiusSlider">Corner Radius: <span id="rectCornerRadiusValue"></span>px</label>
+            <input type="range" id="rectCornerRadiusSlider" min="0" max="150" step="1" value="30">
+        </div>
+        
         <div class="control-group">
             <label for="innerRadiusFactorSlider">Edge distortion thickness: <span id="innerRadiusFactorValue"></span>px</label>
             <input type="range" id="innerRadiusFactorSlider" min="5" max="100" step="1" value="30">
         </div>
+        
         <div class="control-group">
             <label for="refractionStrengthSlider">Refraction Strength: <span id="refractionStrengthValue"></span></label>
-            <input type="range" id="refractionStrengthSlider" min="0" max="100" value="25">
+            <input type="range" id="refractionStrengthSlider" min="0" max="100" step="1" value="25">
         </div>
-        <div class="control-group">
-            <label for="gridSpacingSlider">Grid Spacing: <span id="gridSpacingValue"></span>px</label>
-            <input type="range" id="gridSpacingSlider" min="10" max="100" value="25">
-        </div>
+        
         <div class="control-group">
             <label for="glassAlphaSlider">Glass Alpha: <span id="glassAlphaValue"></span></label>
             <input type="range" id="glassAlphaSlider" min="0" max="1" step="0.01" value="0.1">
         </div>
+        
         <div class="control-group">
             <label for="frostinessSlider">Frostiness: <span id="frostinessValue"></span></label>
-            <input type="range" id="frostinessSlider" min="0" max="15" step="0.5" value="1.0">
+            <input type="range" id="frostinessSlider" min="0" max="10" step="0.1" value="1">
         </div>
         
-        <hr>
-
-        <div class="control-group">
-            <label>
-                <input type="checkbox" id="gridToggle" checked> Show Grid
-            </label>
+        <!-- Grid Controls Panel -->
+        <div id="grid-controls-panel" class="grid-controls">
+            <div class="grid-control-item">
+                <label class="toggle-switch">
+                    <input type="checkbox" id="gridToggle" checked>
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="grid-control-item">
+                <input type="range" id="gridSpacingSlider" min="10" max="100" step="1" value="25" class="grid-spacing-slider">
+            </div>
         </div>
+
+        <!-- Icons overlaid on glass elements -->
+        <img id="add-image-icon" src="assets/add-image.svg" alt="Add Image" class="glass-icon">
+        <img id="grid-icon" src="assets/show-grid.svg" alt="Grid Controls" class="glass-icon">
         
         <!-- Hidden file input for image upload -->
         <input type="file" id="imageUpload" accept="image/*" style="display: none;">

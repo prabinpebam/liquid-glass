@@ -35,10 +35,8 @@ if (!gl) {
         uniform vec4 u_pageBackgroundColor;
         uniform bool u_showGrid;
 
-        // Liquid glass shape uniforms
+        // Liquid glass shape uniforms (rectangle only)
         uniform vec2 u_liquidGlassCenter;
-        uniform int u_liquidGlassType;           // 0: Circle, 1: Rounded Rectangle
-        uniform float u_circleRadius;
         uniform vec2 u_rectangleSize;
         uniform float u_rectangleCornerRadius;
         uniform float u_edgeDistortionThickness;
@@ -67,9 +65,28 @@ if (!gl) {
         uniform float u_addImageButtonCornerRadius;
         uniform float u_addImageButtonDistortionThickness;
 
+        // Grid Toggle Button
+        uniform vec2 u_gridToggleButtonCenter;
+        uniform vec2 u_gridToggleButtonSize;
+        uniform float u_gridToggleButtonCornerRadius;
+        uniform float u_gridToggleButtonDistortionThickness;
+
+        // Grid Spacing Slider
+        uniform vec2 u_gridSpacingSliderCenter;
+        uniform vec2 u_gridSpacingSliderSize;
+        uniform float u_gridSpacingSliderCornerRadius;
+        uniform float u_gridSpacingSliderDistortionThickness;
+        uniform bool u_showGridSpacingSlider;
+
+        // Grid Controls Panel (also uses liquid glass effect)
+        uniform vec2 u_gridControlsCenter;
+        uniform vec2 u_gridControlsSize;
+        uniform float u_gridControlsCornerRadius;
+        uniform float u_gridControlsDistortionThickness;
+
         /**
          * Signed Distance Function for rounded rectangles
-         * Used for both main shapes and control panel
+         * Used for all liquid glass shapes
          */
         float sdRoundedBox( vec2 p, vec2 b, float r ) {
             vec2 q = abs(p) - b + r;
@@ -125,7 +142,7 @@ if (!gl) {
             vec2 currentPixelCoord = v_texCoord * u_resolution;
             vec2 relativeToLiquidGlassCenter = currentPixelCoord - u_liquidGlassCenter;
 
-            // Liquid glass shape analysis
+            // Liquid glass shape analysis (rectangle only)
             float distanceMetric;
             bool isOutsideLiquidGlass = false;
             bool isInNonDistortingCenter = false;
@@ -148,7 +165,42 @@ if (!gl) {
             bool isInAddImageButtonDistortingEdge = false;
             float addImageButtonEdgeAmount = 0.0;
             
-            // Check control panel first (has priority)
+            // Grid Toggle Button liquid glass analysis
+            vec2 relativeToGridToggleButton = currentPixelCoord - u_gridToggleButtonCenter;
+            float gridToggleButtonSDF = sdRoundedBox(relativeToGridToggleButton, u_gridToggleButtonSize * 0.5, u_gridToggleButtonCornerRadius);
+            
+            bool isInGridToggleButton = false;
+            bool isInGridToggleButtonDistortingEdge = false;
+            float gridToggleButtonEdgeAmount = 0.0;
+
+            // Grid Spacing Slider liquid glass analysis
+            vec2 relativeToGridSpacingSlider = currentPixelCoord - u_gridSpacingSliderCenter;
+            float gridSpacingSliderSDF = sdRoundedBox(relativeToGridSpacingSlider, u_gridSpacingSliderSize * 0.5, u_gridSpacingSliderCornerRadius);
+            
+            bool isInGridSpacingSlider = false;
+            bool isInGridSpacingSliderDistortingEdge = false;
+            float gridSpacingSliderEdgeAmount = 0.0;
+            
+            // Grid Controls Panel liquid glass analysis
+            vec2 relativeToGridControls = currentPixelCoord - u_gridControlsCenter;
+            float gridControlsSDF = sdRoundedBox(relativeToGridControls, u_gridControlsSize * 0.5, u_gridControlsCornerRadius);
+            
+            bool isInGridControls = false;
+            bool isInGridControlsDistortingEdge = false;
+            float gridControlsEdgeAmount = 0.0;
+            
+            // Check grid controls (lower priority than control panel and add image button)
+            if (gridControlsSDF <= 0.0) {
+                isInGridControls = true;
+                if (gridControlsSDF > -u_gridControlsDistortionThickness) {
+                    isInGridControlsDistortingEdge = true;
+                    if (u_gridControlsDistortionThickness > 0.001) {
+                        gridControlsEdgeAmount = (gridControlsSDF + u_gridControlsDistortionThickness) / u_gridControlsDistortionThickness;
+                    }
+                }
+            }
+
+            // Update priority order: control panel > add image button > grid controls
             if (controlPanelSDF <= 0.0) {
                 isInControlPanel = true;
                 if (controlPanelSDF > -u_controlPanelDistortionThickness) {
@@ -158,7 +210,6 @@ if (!gl) {
                     }
                 }
             } else if (addImageButtonSDF <= 0.0) {
-                // Check add image button (has priority over main shape but lower than control panel)
                 isInAddImageButton = true;
                 if (addImageButtonSDF > -u_addImageButtonDistortionThickness) {
                     isInAddImageButtonDistortingEdge = true;
@@ -166,40 +217,47 @@ if (!gl) {
                         addImageButtonEdgeAmount = (addImageButtonSDF + u_addImageButtonDistortionThickness) / u_addImageButtonDistortionThickness;
                     }
                 }
-            }
-
-            // Analyze main liquid glass shape
-            if (u_liquidGlassType == 0) { // Circle
-                distanceMetric = length(relativeToLiquidGlassCenter);
-                float outerRadius = u_circleRadius;
-                float innerRadius = u_circleRadius - u_edgeDistortionThickness;
-
-                if (distanceMetric > outerRadius) {
-                    isOutsideLiquidGlass = true;
-                } else if (distanceMetric <= innerRadius) {
-                    isInNonDistortingCenter = true;
-                } else {
-                    isInDistortingEdge = true;
-                    if (u_edgeDistortionThickness > 0.001) {
-                        edgeDistortionAmount = (distanceMetric - innerRadius) / u_edgeDistortionThickness;
+            } else if (gridControlsSDF <= 0.0) {
+                isInGridControls = true;
+                if (gridControlsSDF > -u_gridControlsDistortionThickness) {
+                    isInGridControlsDistortingEdge = true;
+                    if (u_gridControlsDistortionThickness > 0.001) {
+                        gridControlsEdgeAmount = (gridControlsSDF + u_gridControlsDistortionThickness) / u_gridControlsDistortionThickness;
                     }
                 }
-            } else if (u_liquidGlassType == 1) { // Rounded Rectangle
-                float cornerRadius = min(u_rectangleCornerRadius, min(u_rectangleSize.x*0.5, u_rectangleSize.y*0.5));
-                distanceMetric = sdRoundedBox(relativeToLiquidGlassCenter, u_rectangleSize * 0.5, cornerRadius);
-                
-                float outerBoundary = 0.0;
-                float innerBoundary = -u_edgeDistortionThickness;
-
-                if (distanceMetric > outerBoundary) {
-                    isOutsideLiquidGlass = true;
-                } else if (distanceMetric <= innerBoundary) {
-                    isInNonDistortingCenter = true;
-                } else {
-                    isInDistortingEdge = true;
-                    if (u_edgeDistortionThickness > 0.001) {
-                         edgeDistortionAmount = (distanceMetric - innerBoundary) / u_edgeDistortionThickness;
+            } else if (gridToggleButtonSDF <= 0.0) {
+                isInGridToggleButton = true;
+                if (gridToggleButtonSDF > -u_gridToggleButtonDistortionThickness) {
+                    isInGridToggleButtonDistortingEdge = true;
+                    if (u_gridToggleButtonDistortionThickness > 0.001) {
+                        gridToggleButtonEdgeAmount = (gridToggleButtonSDF + u_gridToggleButtonDistortionThickness) / u_gridToggleButtonDistortionThickness;
                     }
+                }
+            } else if (u_showGridSpacingSlider && gridSpacingSliderSDF <= 0.0) {
+                isInGridSpacingSlider = true;
+                if (gridSpacingSliderSDF > -u_gridSpacingSliderDistortionThickness) {
+                    isInGridSpacingSliderDistortingEdge = true;
+                    if (u_gridSpacingSliderDistortionThickness > 0.001) {
+                        gridSpacingSliderEdgeAmount = (gridSpacingSliderSDF + u_gridSpacingSliderDistortionThickness) / u_gridSpacingSliderDistortionThickness;
+                    }
+                }
+            }
+
+            // Analyze main liquid glass shape (rounded rectangle)
+            float cornerRadius = min(u_rectangleCornerRadius, min(u_rectangleSize.x*0.5, u_rectangleSize.y*0.5));
+            distanceMetric = sdRoundedBox(relativeToLiquidGlassCenter, u_rectangleSize * 0.5, cornerRadius);
+            
+            float outerBoundary = 0.0;
+            float innerBoundary = -u_edgeDistortionThickness;
+
+            if (distanceMetric > outerBoundary) {
+                isOutsideLiquidGlass = true;
+            } else if (distanceMetric <= innerBoundary) {
+                isInNonDistortingCenter = true;
+            } else {
+                isInDistortingEdge = true;
+                if (u_edgeDistortionThickness > 0.001) {
+                     edgeDistortionAmount = (distanceMetric - innerBoundary) / u_edgeDistortionThickness;
                 }
             }
 
@@ -275,6 +333,42 @@ if (!gl) {
                 // Add button edge glow
                 if (isInAddImageButtonDistortingEdge) {
                     float edgeGlow = smoothstep(0.7, 1.0, addImageButtonEdgeAmount) * 0.2;
+                    finalColor.rgb += vec3(edgeGlow);
+                }
+            } else if (isInGridControls) {
+                // Render grid controls panel with liquid glass effect
+                vec2 samplingCoord = currentPixelCoord;
+                
+                // Apply refraction distortion for grid controls edge
+                if (isInGridControlsDistortingEdge) {
+                    float distortionCurve = 2.0;
+                    float distortionMagnitude = 15.0 * pow(clamp(gridControlsEdgeAmount, 0.0, 1.0), distortionCurve);
+                    samplingCoord = currentPixelCoord - normalize(relativeToGridControls) * distortionMagnitude;
+                }
+
+                // Apply light frosting effect for grid controls
+                vec4 refractedBackground;
+                vec4 totalColor = vec4(0.0);
+                float sampleCount = 0.0;
+                
+                // Light blur for subtle frosted effect
+                for (int x = -1; x <= 1; x++) {
+                    for (int y = -1; y <= 1; y++) {
+                        vec2 frostOffset = vec2(float(x), float(y)) * 0.8;
+                        vec2 frostSamplePos = samplingCoord + frostOffset;
+                        totalColor += renderBackground(frostSamplePos, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                        sampleCount += 1.0;
+                    }
+                }
+                refractedBackground = totalColor / sampleCount;
+
+                // Mix with grid controls glass tint
+                vec4 gridControlsGlassTint = vec4(250.0/255.0, 250.0/255.0, 255.0/255.0, 0.12);
+                finalColor = mix(refractedBackground, gridControlsGlassTint, gridControlsGlassTint.a);
+
+                // Add edge glow
+                if (isInGridControlsDistortingEdge) {
+                    float edgeGlow = smoothstep(0.7, 1.0, gridControlsEdgeAmount) * 0.18;
                     finalColor.rgb += vec3(edgeGlow);
                 }
             } else if (isOutsideLiquidGlass) {
@@ -356,10 +450,8 @@ if (!gl) {
         position: gl.getAttribLocation(liquidGlassProgram, "a_position"),
         resolution: gl.getUniformLocation(liquidGlassProgram, "u_resolution"),
         
-        // Main liquid glass shape uniforms
+        // Main liquid glass shape uniforms (rectangle only)
         liquidGlassCenter: gl.getUniformLocation(liquidGlassProgram, "u_liquidGlassCenter"),
-        liquidGlassType: gl.getUniformLocation(liquidGlassProgram, "u_liquidGlassType"),
-        circleRadius: gl.getUniformLocation(liquidGlassProgram, "u_circleRadius"),
         rectangleSize: gl.getUniformLocation(liquidGlassProgram, "u_rectangleSize"),
         rectangleCornerRadius: gl.getUniformLocation(liquidGlassProgram, "u_rectangleCornerRadius"),
         edgeDistortionThickness: gl.getUniformLocation(liquidGlassProgram, "u_edgeDistortionThickness"),
@@ -392,7 +484,26 @@ if (!gl) {
         addImageButtonCenter: gl.getUniformLocation(liquidGlassProgram, "u_addImageButtonCenter"),
         addImageButtonSize: gl.getUniformLocation(liquidGlassProgram, "u_addImageButtonSize"),
         addImageButtonCornerRadius: gl.getUniformLocation(liquidGlassProgram, "u_addImageButtonCornerRadius"),
-        addImageButtonDistortionThickness: gl.getUniformLocation(liquidGlassProgram, "u_addImageButtonDistortionThickness")
+        addImageButtonDistortionThickness: gl.getUniformLocation(liquidGlassProgram, "u_addImageButtonDistortionThickness"),
+
+        // Grid Toggle Button
+        gridToggleButtonCenter: gl.getUniformLocation(liquidGlassProgram, "u_gridToggleButtonCenter"),
+        gridToggleButtonSize: gl.getUniformLocation(liquidGlassProgram, "u_gridToggleButtonSize"),
+        gridToggleButtonCornerRadius: gl.getUniformLocation(liquidGlassProgram, "u_gridToggleButtonCornerRadius"),
+        gridToggleButtonDistortionThickness: gl.getUniformLocation(liquidGlassProgram, "u_gridToggleButtonDistortionThickness"),
+
+        // Grid Spacing Slider
+        gridSpacingSliderCenter: gl.getUniformLocation(liquidGlassProgram, "u_gridSpacingSliderCenter"),
+        gridSpacingSliderSize: gl.getUniformLocation(liquidGlassProgram, "u_gridSpacingSliderSize"),
+        gridSpacingSliderCornerRadius: gl.getUniformLocation(liquidGlassProgram, "u_gridSpacingSliderCornerRadius"),
+        gridSpacingSliderDistortionThickness: gl.getUniformLocation(liquidGlassProgram, "u_gridSpacingSliderDistortionThickness"),
+        showGridSpacingSlider: gl.getUniformLocation(liquidGlassProgram, "u_showGridSpacingSlider"),
+
+        // Grid Controls Panel
+        gridControlsCenter: gl.getUniformLocation(liquidGlassProgram, "u_gridControlsCenter"),
+        gridControlsSize: gl.getUniformLocation(liquidGlassProgram, "u_gridControlsSize"),
+        gridControlsCornerRadius: gl.getUniformLocation(liquidGlassProgram, "u_gridControlsCornerRadius"),
+        gridControlsDistortionThickness: gl.getUniformLocation(liquidGlassProgram, "u_gridControlsDistortionThickness")
     };
 
     // Initialize background image texture uniform locations
@@ -406,8 +517,6 @@ if (!gl) {
 
     // Liquid glass parameters with semantic names
     let liquidGlassParams = {
-        shapeType: 0, // 0: Circle, 1: Rounded Rectangle
-        circleRadius: 150,
         rectangleWidth: 300,
         rectangleHeight: 200,
         rectangleCornerRadius: 30,
@@ -429,11 +538,20 @@ if (!gl) {
     const controlPanelCornerRadius = 20;
     const controlPanelDistortionThickness = 15;
 
-    // Add Image Button configuration (also uses liquid glass effect)
-    let addImageButtonPosition = { x: 100, y: 100 }; // Bottom-left area with 50px virtual margin
-    let addImageButtonSize = { x: 120, y: 40 };
-    const addImageButtonCornerRadius = 20;
+    // Add Image Button configuration (circle, 50px diameter)
+    let addImageButtonPosition = { x: 100, y: 100 };
+    let addImageButtonSize = { x: 50, y: 50 };
+    const addImageButtonCornerRadius = 25; // Half of diameter for perfect circle
     const addImageButtonDistortionThickness = 8;
+
+    // Grid Controls Panel configuration (aligned with add image button)
+    let gridControlsPosition = { x: 200, y: 100 }; // Same y as add image button
+    let gridControlsSize = { x: 280, y: 50 }; // Same height as add image button
+    const gridControlsCornerRadius = 25;
+    const gridControlsDistortionThickness = 8;
+
+    // These variables were referenced but not defined - remove them from shader and render calls
+    // since we're using the grid controls panel approach instead
 
     // Cache for performance optimization
     let canvasRect = null;
@@ -456,22 +574,21 @@ if (!gl) {
 
     // UI element references with semantic names
     const uiElements = {
-        liquidGlassTypeSelector: document.getElementById('shapeTypeSelector'),
-        circleControlsGroup: document.getElementById('diskControls'),
-        rectangleControlsGroup: document.getElementById('rectControls'),
-        circleRadiusControl: { slider: document.getElementById('diskRadiusSlider'), valueDisplay: document.getElementById('diskRadiusValue') },
         rectangleWidthControl: { slider: document.getElementById('rectWidthSlider'), valueDisplay: document.getElementById('rectWidthValue') },
         rectangleHeightControl: { slider: document.getElementById('rectHeightSlider'), valueDisplay: document.getElementById('rectHeightValue') },
         rectangleCornerRadiusControl: { slider: document.getElementById('rectCornerRadiusSlider'), valueDisplay: document.getElementById('rectCornerRadiusValue') },
         edgeDistortionThicknessControl: { slider: document.getElementById('innerRadiusFactorSlider'), valueDisplay: document.getElementById('innerRadiusFactorValue') },
         refractionStrengthControl: { slider: document.getElementById('refractionStrengthSlider'), valueDisplay: document.getElementById('refractionStrengthValue') },
-        gridSpacingControl: { slider: document.getElementById('gridSpacingSlider'), valueDisplay: document.getElementById('gridSpacingValue') },
         glassAlphaControl: { slider: document.getElementById('glassAlphaSlider'), valueDisplay: document.getElementById('glassAlphaValue') },
         frostinessControl: { slider: document.getElementById('frostinessSlider'), valueDisplay: document.getElementById('frostinessValue') },
         gridToggle: document.getElementById('gridToggle'),
+        gridSpacingSlider: document.getElementById('gridSpacingSlider'), // Separate reference for grid spacing
         backgroundImageUpload: document.getElementById('imageUpload'),
         controlPanel: document.getElementById('controls-pane'),
-        controlPanelTitle: document.getElementById('controls-title')
+        controlPanelTitle: document.getElementById('controls-title'),
+        gridControlsPanel: document.getElementById('grid-controls-panel'),
+        addImageIcon: document.getElementById('add-image-icon'),
+        gridIcon: document.getElementById('grid-icon')
     };
 
     /**
@@ -502,26 +619,13 @@ if (!gl) {
      * Initialize all UI controls and event listeners
      */
     function initializeLiquidGlassControls() {
-        // Shape type selector
-        if (uiElements.liquidGlassTypeSelector) {
-            uiElements.liquidGlassTypeSelector.value = liquidGlassParams.shapeType;
-            updateLiquidGlassControlsVisibility();
-            uiElements.liquidGlassTypeSelector.addEventListener('change', (e) => {
-                liquidGlassParams.shapeType = parseInt(e.target.value);
-                updateLiquidGlassControlsVisibility();
-                requestAnimationFrame(renderLiquidGlassScene);
-            });
-        }
-
-        // Parameter controls with semantic mapping
+        // Parameter controls with semantic mapping (excluding gridSpacing)
         const parameterMappings = [
-            { key: 'circleRadius', paramName: 'circleRadius' },
             { key: 'rectangleWidth', paramName: 'rectangleWidth' },
             { key: 'rectangleHeight', paramName: 'rectangleHeight' },
             { key: 'rectangleCornerRadius', paramName: 'rectangleCornerRadius' },
             { key: 'edgeDistortionThickness', paramName: 'edgeDistortionThickness' },
             { key: 'refractionStrength', paramName: 'refractionStrength' },
-            { key: 'gridSpacing', paramName: 'gridSpacing' },
             { key: 'frostiness', paramName: 'frostiness' }
         ];
 
@@ -557,6 +661,15 @@ if (!gl) {
             uiElements.gridToggle.checked = liquidGlassParams.showGrid;
             uiElements.gridToggle.addEventListener('change', (e) => {
                 liquidGlassParams.showGrid = e.target.checked;
+                requestAnimationFrame(renderLiquidGlassScene);
+            });
+        }
+
+        // Grid spacing slider (direct reference, no valueDisplay)
+        if (uiElements.gridSpacingSlider) {
+            uiElements.gridSpacingSlider.value = liquidGlassParams.gridSpacing;
+            uiElements.gridSpacingSlider.addEventListener('input', (e) => {
+                liquidGlassParams.gridSpacing = parseFloat(e.target.value);
                 requestAnimationFrame(renderLiquidGlassScene);
             });
         }
@@ -609,13 +722,10 @@ if (!gl) {
         const dx = x - liquidGlassCenterPosition.x;
         const dy = y - liquidGlassCenterPosition.y;
         
-        if (liquidGlassParams.shapeType === 0) { // Circle
-            return Math.sqrt(dx * dx + dy * dy) <= liquidGlassParams.circleRadius;
-        } else { // Rectangle
-            const halfW = liquidGlassParams.rectangleWidth * 0.5;
-            const halfH = liquidGlassParams.rectangleHeight * 0.5;
-            return Math.abs(dx) <= halfW && Math.abs(dy) <= halfH;
-        }
+        // Rectangle only
+        const halfW = liquidGlassParams.rectangleWidth * 0.5;
+        const halfH = liquidGlassParams.rectangleHeight * 0.5;
+        return Math.abs(dx) <= halfW && Math.abs(dy) <= halfH;
     }
 
     /**
@@ -644,25 +754,47 @@ if (!gl) {
     }
 
     /**
+     * Checks if a point is inside the grid toggle button
+     */
+    function isPointInsideGridToggleButton(x, y) {
+        // Check if point is inside the left portion of the grid controls panel (toggle area)
+        const toggleAreaWidth = 70; // First 70px of the grid controls panel for toggle
+        const dx = x - (gridControlsPosition.x - gridControlsSize.x * 0.5 + toggleAreaWidth * 0.5);
+        const dy = y - gridControlsPosition.y;
+        const halfW = toggleAreaWidth * 0.5;
+        const halfH = gridControlsSize.y * 0.5;
+        return Math.abs(dx) <= halfW && Math.abs(dy) <= halfH;
+    }
+
+    /**
+     * Checks if a point is inside the grid spacing slider
+     */
+    function isPointInsideGridSpacingSlider(x, y) {
+        if (!liquidGlassParams.showGrid) return false;
+        // Check if point is inside the right portion of the grid controls panel (slider area)
+        const sliderAreaWidth = 150; // Right 150px of the grid controls panel for slider
+        const dx = x - (gridControlsPosition.x + gridControlsSize.x * 0.5 - sliderAreaWidth * 0.5);
+        const dy = y - gridControlsPosition.y;
+        const halfW = sliderAreaWidth * 0.5;
+        const halfH = gridControlsSize.y * 0.5;
+        return Math.abs(dx) <= halfW && Math.abs(dy) <= halfH;
+    }
+
+    /**
      * Determines if the mouse is over a resize handle for shapes or images
      */
     function getActiveResizeHandle(x, y) {
         const edgeThreshold = 15;
         
-        // Check liquid glass shape resize handles
+        // Check liquid glass shape resize handles (rectangle only)
         if (isPointInsideLiquidGlass(x, y)) {
             const dx = x - liquidGlassCenterPosition.x;
             const dy = y - liquidGlassCenterPosition.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
             
-            if (liquidGlassParams.shapeType === 0 && Math.abs(dist - liquidGlassParams.circleRadius) < edgeThreshold) {
+            const halfW = liquidGlassParams.rectangleWidth * 0.5;
+            const halfH = liquidGlassParams.rectangleHeight * 0.5;
+            if (Math.abs(Math.abs(dx) - halfW) < edgeThreshold || Math.abs(Math.abs(dy) - halfH) < edgeThreshold) {
                 return 'liquidGlass';
-            } else if (liquidGlassParams.shapeType === 1) {
-                const halfW = liquidGlassParams.rectangleWidth * 0.5;
-                const halfH = liquidGlassParams.rectangleHeight * 0.5;
-                if (Math.abs(Math.abs(dx) - halfW) < edgeThreshold || Math.abs(Math.abs(dy) - halfH) < edgeThreshold) {
-                    return 'liquidGlass';
-                }
             }
         }
         
@@ -696,6 +828,48 @@ if (!gl) {
         // Convert HTML pane position to canvas coordinates
         controlPanelPosition.x = (htmlPaneRect.left - canvasRect.left) + controlPanelSize.x * 0.5;
         controlPanelPosition.y = canvas.height - (htmlPaneRect.top - canvasRect.top) - controlPanelSize.y * 0.5;
+    }
+
+    function updateGridControlsPosition() {
+        const now = Date.now();
+        if (!canvasRect || now - lastRectUpdate > RECT_UPDATE_INTERVAL) {
+            canvasRect = canvas.getBoundingClientRect();
+            lastRectUpdate = now;
+        }
+        
+        if (uiElements.gridControlsPanel) {
+            const htmlPanelRect = uiElements.gridControlsPanel.getBoundingClientRect();
+            
+            // Update grid controls size to match actual HTML panel dimensions
+            gridControlsSize.x = htmlPanelRect.width;
+            gridControlsSize.y = htmlPanelRect.height;
+            
+            // Convert HTML panel position to canvas coordinates
+            gridControlsPosition.x = (htmlPanelRect.left - canvasRect.left) + gridControlsSize.x * 0.5;
+            gridControlsPosition.y = canvas.height - (htmlPanelRect.top - canvasRect.top) - gridControlsSize.y * 0.5;
+        }
+    }
+
+    function updateAddImageIconPosition() {
+        // Position the add image icon centered over the button
+        const iconLeft = addImageButtonPosition.x - 12; // 24px icon / 2 = 12px offset
+        const iconTop = canvas.height - addImageButtonPosition.y - 12; // 24px icon / 2 = 12px offset
+        
+        if (uiElements.addImageIcon) {
+            uiElements.addImageIcon.style.left = `${iconLeft}px`;
+            uiElements.addImageIcon.style.top = `${iconTop}px`;
+        }
+    }
+
+    function updateGridIconPosition() {
+        // Position the grid icon over the left side of the grid controls
+        const iconLeft = gridControlsPosition.x - gridControlsSize.x * 0.5 + 20; // 20px from left edge
+        const iconTop = canvas.height - gridControlsPosition.y - 10; // 20px icon / 2 = 10px offset
+        
+        if (uiElements.gridIcon) {
+            uiElements.gridIcon.style.left = `${iconLeft}px`;
+            uiElements.gridIcon.style.top = `${iconTop}px`;
+        }
     }
 
     function syncHTMLPanePosition() {
@@ -754,9 +928,6 @@ if (!gl) {
         }
     });
 
-    /**
-     * Canvas interaction handlers for liquid glass shapes and background images
-     */
     canvas.addEventListener('mousemove', (e) => {
         if (isControlPanelDragging) return;
         
@@ -779,21 +950,13 @@ if (!gl) {
             const dy = mousePos.y - dragStartY;
             
             if (resizeHandle === 'liquidGlass') {
-                if (liquidGlassParams.shapeType === 0) {
-                    // Circle resize with reduced sensitivity
-                    const newRadius = Math.max(20, liquidGlassParams.circleRadius + dx * 0.2);
-                    liquidGlassParams.circleRadius = newRadius;
-                    uiElements.circleRadiusControl.slider.value = newRadius;
-                    uiElements.circleRadiusControl.valueDisplay.textContent = Math.round(newRadius);
-                } else {
-                    // Rectangle resize
-                    liquidGlassParams.rectangleWidth = Math.max(50, initialElementSize.x + dx);
-                    liquidGlassParams.rectangleHeight = Math.max(50, initialElementSize.y + dy);
-                    uiElements.rectangleWidthControl.slider.value = liquidGlassParams.rectangleWidth;
-                    uiElements.rectangleWidthControl.valueDisplay.textContent = Math.round(liquidGlassParams.rectangleWidth);
-                    uiElements.rectangleHeightControl.slider.value = liquidGlassParams.rectangleHeight;
-                    uiElements.rectangleHeightControl.valueDisplay.textContent = Math.round(liquidGlassParams.rectangleHeight);
-                }
+                // Rectangle resize
+                liquidGlassParams.rectangleWidth = Math.max(50, initialElementSize.x + dx);
+                liquidGlassParams.rectangleHeight = Math.max(50, initialElementSize.y + dy);
+                uiElements.rectangleWidthControl.slider.value = liquidGlassParams.rectangleWidth;
+                uiElements.rectangleWidthControl.valueDisplay.textContent = Math.round(liquidGlassParams.rectangleWidth);
+                uiElements.rectangleHeightControl.slider.value = liquidGlassParams.rectangleHeight;
+                uiElements.rectangleHeightControl.valueDisplay.textContent = Math.round(liquidGlassParams.rectangleHeight);
             } else if (typeof resizeHandle === 'number') {
                 // Background image resize
                 backgroundImagesData[resizeHandle].size.x = Math.max(50, initialElementSize.x + dx);
@@ -823,13 +986,39 @@ if (!gl) {
         
         // Check if clicking on add image button
         if (isPointInsideAddImageButton(mousePos.x, mousePos.y)) {
-            // Trigger file input
             if (uiElements.backgroundImageUpload) {
                 uiElements.backgroundImageUpload.click();
             }
             return;
         }
-        
+
+        // Check if clicking on grid toggle button
+        if (isPointInsideGridToggleButton(mousePos.x, mousePos.y)) {
+            liquidGlassParams.showGrid = !liquidGlassParams.showGrid;
+            if (uiElements.gridToggle) {
+                uiElements.gridToggle.checked = liquidGlassParams.showGrid;
+            }
+            requestAnimationFrame(renderLiquidGlassScene);
+            return;
+        }
+
+        // Check if clicking on grid spacing slider
+        if (isPointInsideGridSpacingSlider(mousePos.x, mousePos.y)) {
+            // Handle grid spacing adjustment based on click position within the slider area
+            const sliderAreaWidth = 150;
+            const sliderStartX = gridControlsPosition.x + gridControlsSize.x * 0.5 - sliderAreaWidth;
+            const relativeX = mousePos.x - sliderStartX;
+            const normalizedX = relativeX / sliderAreaWidth;
+            const newSpacing = 10 + (normalizedX * 90); // Range: 10-100
+            liquidGlassParams.gridSpacing = Math.max(10, Math.min(100, newSpacing));
+            
+            if (uiElements.gridSpacingSlider) {
+                uiElements.gridSpacingSlider.value = liquidGlassParams.gridSpacing;
+            }
+            requestAnimationFrame(renderLiquidGlassScene);
+            return;
+        }
+
         const resizeHandleType = getActiveResizeHandle(mousePos.x, mousePos.y);
         
         dragStartX = mousePos.x;
@@ -891,11 +1080,19 @@ if (!gl) {
             liquidGlassCenterPosition.y = canvas.height / 2;
             
             // Position add image button in bottom-left with 50px virtual margin
-            addImageButtonPosition.x = 50 + addImageButtonSize.x * 0.5;
-            addImageButtonPosition.y = 50 + addImageButtonSize.y * 0.5;
+            addImageButtonPosition.x = 50 + addImageButtonSize.x * 0.5; // 75px from left
+            addImageButtonPosition.y = 50 + addImageButtonSize.y * 0.5; // 75px from bottom
+            
+            // Position grid controls aligned with add image button, with gap
+            const gapBetweenElements = 20; // 20px gap
+            gridControlsPosition.x = addImageButtonPosition.x + addImageButtonSize.x * 0.5 + gapBetweenElements + gridControlsSize.x * 0.5;
+            gridControlsPosition.y = addImageButtonPosition.y; // Same y position for perfect alignment
         }
         
         updateControlPanelPosition();
+        updateGridControlsPosition();
+        updateAddImageIconPosition();
+        updateGridIconPosition();
         requestAnimationFrame(renderLiquidGlassScene);
     }
     window.addEventListener('resize', resizeCanvas);
@@ -922,7 +1119,6 @@ if (!gl) {
         gl.uniform4fv(uniformLocations.pageBackgroundColor, pageBackgroundColorVal);
         gl.uniform4fv(uniformLocations.glassBaseColor, liquidGlassParams.glassBaseColor);
         
-        gl.uniform1i(uniformLocations.liquidGlassType, liquidGlassParams.shapeType);
         gl.uniform1f(uniformLocations.frostiness, liquidGlassParams.frostiness);
         gl.uniform1i(uniformLocations.showGrid, liquidGlassParams.showGrid);
         gl.uniform1i(uniformLocations.hasBackgroundImages, backgroundImagesData.length > 0);
@@ -939,6 +1135,12 @@ if (!gl) {
         gl.uniform2f(uniformLocations.addImageButtonSize, addImageButtonSize.x, addImageButtonSize.y);
         gl.uniform1f(uniformLocations.addImageButtonCornerRadius, addImageButtonCornerRadius);
         gl.uniform1f(uniformLocations.addImageButtonDistortionThickness, addImageButtonDistortionThickness);
+
+        // Set grid controls panel uniforms (this handles both toggle and slider visually)
+        gl.uniform2f(uniformLocations.gridControlsCenter, gridControlsPosition.x, gridControlsPosition.y);
+        gl.uniform2f(uniformLocations.gridControlsSize, gridControlsSize.x, gridControlsSize.y);
+        gl.uniform1f(uniformLocations.gridControlsCornerRadius, gridControlsCornerRadius);
+        gl.uniform1f(uniformLocations.gridControlsDistortionThickness, gridControlsDistortionThickness);
 
         // Set up background image textures
         for (let i = 0; i < 8; i++) {
@@ -966,22 +1168,15 @@ if (!gl) {
             gl.uniform2fv(uniformLocations.backgroundImageSizes, sizes);
         }
 
-        // Set liquid glass shape-specific uniforms with edge distortion thickness validation
-        if (liquidGlassParams.shapeType == 0) { // Circle
-            gl.uniform1f(uniformLocations.circleRadius, liquidGlassParams.circleRadius);
-            // Ensure edge distortion doesn't exceed shape size
-            const maxThickness = liquidGlassParams.circleRadius - 5; // Leave 5px minimum for center
-            const validatedThickness = Math.min(liquidGlassParams.edgeDistortionThickness, Math.max(0, maxThickness));
-            gl.uniform1f(uniformLocations.edgeDistortionThickness, validatedThickness);
-        } else { // Rectangle
-            gl.uniform2f(uniformLocations.rectangleSize, liquidGlassParams.rectangleWidth, liquidGlassParams.rectangleHeight);
-            gl.uniform1f(uniformLocations.rectangleCornerRadius, liquidGlassParams.rectangleCornerRadius);
-            // For rectangle, ensure edge distortion doesn't exceed half the smaller dimension
-            const characteristicDimension = Math.min(liquidGlassParams.rectangleWidth, liquidGlassParams.rectangleHeight) * 0.5;
-            const maxThickness = characteristicDimension - 5; // Leave 5px minimum for center
-            const validatedThickness = Math.min(liquidGlassParams.edgeDistortionThickness, Math.max(0, maxThickness));
-            gl.uniform1f(uniformLocations.edgeDistortionThickness, validatedThickness);
-        }
+        // Set liquid glass shape uniforms (rectangle only)
+        gl.uniform2f(uniformLocations.rectangleSize, liquidGlassParams.rectangleWidth, liquidGlassParams.rectangleHeight);
+        gl.uniform1f(uniformLocations.rectangleCornerRadius, liquidGlassParams.rectangleCornerRadius);
+        
+        // For rectangle, ensure edge distortion doesn't exceed half the smaller dimension
+        const characteristicDimension = Math.min(liquidGlassParams.rectangleWidth, liquidGlassParams.rectangleHeight) * 0.5;
+        const maxThickness = characteristicDimension - 5; // Leave 5px minimum for center
+        const validatedThickness = Math.min(liquidGlassParams.edgeDistortionThickness, Math.max(0, maxThickness));
+        gl.uniform1f(uniformLocations.edgeDistortionThickness, validatedThickness);
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
@@ -990,4 +1185,7 @@ if (!gl) {
     initializeLiquidGlassControls();
     resizeCanvas();
     updateControlPanelPosition();
+    updateGridControlsPosition();
+    updateAddImageIconPosition();
+    updateGridIconPosition();
 }
