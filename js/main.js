@@ -297,7 +297,7 @@ if (!gl) {
         rectWidth: 300,
         rectHeight: 200,
         rectCornerRadius: 30,
-        innerRadiusFactor: 0.8, 
+        distortionRingThickness: 30, // Changed from innerRadiusFactor to absolute pixels
         refractionStrength: 25.0,
         gridSpacing: 25.0,
         glassBaseColor: [250/255, 250/255, 255/255, 0.10],
@@ -374,12 +374,11 @@ if (!gl) {
         ['diskRadius', 'rectWidth', 'rectHeight', 'rectCornerRadius', 'innerRadiusFactor', 'refractionStrength', 'gridSpacing', 'frostiness'].forEach(key => {
             if (!ui[key] || !ui[key].slider) return; 
             let paramKey = key;
-            if (key === 'diskRadius') paramKey = 'diskPhysicalRadius'; // mapping
+            if (key === 'diskRadius') paramKey = 'diskPhysicalRadius';
             else if (key === 'rectWidth') paramKey = 'rectWidth';
             else if (key === 'rectHeight') paramKey = 'rectHeight';
             else if (key === 'rectCornerRadius') paramKey = 'rectCornerRadius';
-            // frostiness maps directly to params.frostiness, no special paramKey needed
-
+            else if (key === 'innerRadiusFactor') paramKey = 'distortionRingThickness'; // Map to new parameter name
 
             ui[key].slider.value = params[paramKey];
             ui[key].valueDisplay.textContent = params[paramKey];
@@ -765,17 +764,22 @@ if (!gl) {
             gl.uniform2fv(loc.imageSizes, sizes);
         }
 
-        let currentDistortingRingThickness = 0;
+        // Use absolute pixel values instead of relative calculations
         if (params.shapeType == 0) {
             gl.uniform1f(loc.diskRadius, params.diskPhysicalRadius);
-            currentDistortingRingThickness = params.diskPhysicalRadius * (1.0 - params.innerRadiusFactor);
+            // Ensure distortion ring doesn't exceed the shape size
+            const maxThickness = params.diskPhysicalRadius - 5; // Leave 5px minimum for center
+            const currentDistortingRingThickness = Math.min(params.distortionRingThickness, Math.max(0, maxThickness));
+            gl.uniform1f(loc.distortingRingThickness, currentDistortingRingThickness);
         } else {
             gl.uniform2f(loc.rectSize, params.rectWidth, params.rectHeight);
             gl.uniform1f(loc.rectCornerRadius, params.rectCornerRadius);
-            let characteristicRectDim = Math.min(params.rectWidth, params.rectHeight) * 0.5;
-            currentDistortingRingThickness = characteristicRectDim * (1.0 - params.innerRadiusFactor);
+            // For rectangle, ensure ring doesn't exceed half the smaller dimension
+            const characteristicRectDim = Math.min(params.rectWidth, params.rectHeight) * 0.5;
+            const maxThickness = characteristicRectDim - 5; // Leave 5px minimum for center
+            const currentDistortingRingThickness = Math.min(params.distortionRingThickness, Math.max(0, maxThickness));
+            gl.uniform1f(loc.distortingRingThickness, currentDistortingRingThickness);
         }
-        gl.uniform1f(loc.distortingRingThickness, Math.max(0.0, currentDistortingRingThickness));
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
