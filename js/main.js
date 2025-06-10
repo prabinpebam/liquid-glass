@@ -25,7 +25,7 @@ class LiquidGlassApp {
             gridSpacing: 25.0,
             glassBaseColor: [250/255, 250/255, 255/255, 0.1],
             frostiness: 1.0,
-            showGrid: true
+            showGrid: false // Changed from true to false - grid off by default
         };
         
         this.backgroundImagesData = [];
