@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Glass Disk Distortion</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="scene">
+        <canvas id="webglCanvas"></canvas>
+    </div>
+
+    <div id="controls-pane">
+        <h3>Controls</h3>
+        <div class="control-group">
+            <label for="diskRadiusSlider">Disk Radius: <span id="diskRadiusValue"></span>px</label>
+            <input type="range" id="diskRadiusSlider" min="50" max="400" value="150">
+        </div>
+        <div class="control-group">
+            <label for="innerRadiusFactorSlider">Inner Radius Factor: <span id="innerRadiusFactorValue"></span></label>
+            <input type="range" id="innerRadiusFactorSlider" min="0.1" max="0.95" step="0.01" value="0.8">
+        </div>
+        <div class="control-group">
+            <label for="refractionStrengthSlider">Refraction Strength: <span id="refractionStrengthValue"></span></label>
+            <input type="range" id="refractionStrengthSlider" min="0" max="100" value="25">
+        </div>
+        <div class="control-group">
+            <label for="gridSpacingSlider">Grid Spacing: <span id="gridSpacingValue"></span>px</label>
+            <input type="range" id="gridSpacingSlider" min="10" max="100" value="25">
+        </div>
+        <div class="control-group">
+            <label for="glassAlphaSlider">Glass Alpha: <span id="glassAlphaValue"></span></label>
+            <input type="range" id="glassAlphaSlider" min="0" max="1" step="0.01" value="0.1">
+        </div>
+    </div>
+
+    <script src="js/main.js" defer></script>
+</body>
+</html>
