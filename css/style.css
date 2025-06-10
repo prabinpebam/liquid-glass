@@ -119,8 +119,8 @@ body, html {
 .grid-controls {
     position: fixed;
     bottom: 50px; /* Match the 50px virtual margin */
-    left: 145px; /* Positioned after add button (75px) + button width (50px) + gap (20px) */
-    width: 280px;
+    left: 155px; /* Positioned after add button (75px) + button width (50px) + gap (20px) */
+    width: 240px;
     height: 50px;
     padding: 10px 20px;
     border-radius: 25px;
