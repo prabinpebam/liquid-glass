@@ -18,47 +18,108 @@ if (!gl) {
         varying vec2 v_texCoord;
 
         uniform vec2 u_resolution;
-        uniform vec2 u_shapeCenter; // Renamed from u_diskCenter
+        uniform vec2 u_shapeCenter;
         uniform float u_refractionStrength;
         uniform vec4 u_gridLineColor;
         uniform float u_gridSpacing;
         uniform vec4 u_pageBackgroundColor;
         uniform vec4 u_glassBaseColor;
+        uniform float u_frostiness;
 
         // Shape specific uniforms
-        uniform int u_shapeType; // 0 for Disk, 1 for Rounded Rectangle
+        uniform int u_shapeType;
         uniform float u_diskRadius;
         uniform vec2 u_rectSize;
         uniform float u_rectCornerRadius;
-        uniform float u_distortingRingThickness; // Thickness of the distorting band
+        uniform float u_distortingRingThickness;
 
-        // SDF for a Rounded Box from Inigo Quilez
-        // p: point
-        // b: half-dimensions of box
-        // r: corner radius
         float sdRoundedBox( vec2 p, vec2 b, float r ) {
             vec2 q = abs(p) - b + r;
             return min(max(q.x,q.y),0.0) + length(max(q,0.0)) - r;
         }
 
-        vec4 getGridColor(vec2 coord, float spacing, vec4 lineColor, vec4 bgColor) {
+        // Hash function for pseudo-random numbers
+        float hash(vec2 p) {
+            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+        }
+
+        vec4 getBackgroundPatternColor(vec2 coord, float spacing, vec4 gridLineCol, vec4 pageBgCol) {
+            vec4 color = pageBgCol;
+
+            // Add text-like rectangles
+            vec2 textPos1 = u_resolution * vec2(0.15, 0.8);
+            for (int i = 0; i < 8; i++) {
+                vec2 rectPos = textPos1 + vec2(float(i) * spacing * 0.6, 0.0);
+                vec2 rectSize = vec2(spacing * 0.4, spacing * 0.15);
+                if (abs(coord.x - rectPos.x) < rectSize.x && abs(coord.y - rectPos.y) < rectSize.y) {
+                    color = mix(color, vec4(0.2, 0.2, 0.2, 1.0), 0.8);
+                }
+            }
+
+            // Add more text lines
+            for (int line = 0; line < 5; line++) {
+                vec2 lineStart = u_resolution * vec2(0.1, 0.7 - float(line) * 0.08);
+                for (int i = 0; i < 12; i++) {
+                    vec2 rectPos = lineStart + vec2(float(i) * spacing * 0.5, 0.0);
+                    vec2 rectSize = vec2(spacing * 0.3, spacing * 0.12);
+                    if (abs(coord.x - rectPos.x) < rectSize.x && abs(coord.y - rectPos.y) < rectSize.y) {
+                        color = mix(color, vec4(0.3, 0.3, 0.3, 1.0), 0.7);
+                    }
+                }
+            }
+
+            // Add colorful shapes (simulating icons/emojis)
+            vec2 circle1_center = u_resolution * vec2(0.25, 0.3);
+            float circle1_radius = spacing * 1.2;
+            if (length(coord - circle1_center) < circle1_radius) {
+                color = mix(color, vec4(1.0, 0.6, 0.2, 1.0), 0.8); // Orange circle
+            }
+
+            vec2 circle2_center = u_resolution * vec2(0.7, 0.6);
+            float circle2_radius = spacing * 0.8;
+            if (length(coord - circle2_center) < circle2_radius) {
+                color = mix(color, vec4(0.2, 0.8, 0.4, 1.0), 0.8); // Green circle
+            }
+
+            vec2 circle3_center = u_resolution * vec2(0.8, 0.2);
+            float circle3_radius = spacing * 1.0;
+            if (length(coord - circle3_center) < circle3_radius) {
+                color = mix(color, vec4(0.3, 0.5, 1.0, 1.0), 0.8); // Blue circle
+            }
+
+            // Add diamond shapes
+            vec2 diamond1 = u_resolution * vec2(0.5, 0.25);
+            vec2 dp = coord - diamond1;
+            if (abs(dp.x) + abs(dp.y) < spacing * 0.7) {
+                color = mix(color, vec4(0.9, 0.3, 0.7, 1.0), 0.7); // Pink diamond
+            }
+
+            // Add triangular shapes
+            vec2 tri1 = u_resolution * vec2(0.4, 0.7);
+            vec2 tp = coord - tri1;
+            if (tp.y > 0.0 && tp.y < spacing * 0.8 && abs(tp.x) < (spacing * 0.8 - tp.y)) {
+                color = mix(color, vec4(0.8, 0.8, 0.2, 1.0), 0.6); // Yellow triangle
+            }
+
+            // Overlay grid lines on top of everything
             vec2 gridPos = mod(coord, spacing);
             float lineThickness = 1.0;
             if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
-                return lineColor;
+                color = mix(color, gridLineCol, gridLineCol.a * 0.8);
             }
-            return bgColor;
+
+            return color;
         }
 
         void main() {
             vec2 currentPixelCoord = v_texCoord * u_resolution;
             vec2 p_relativeToCenter = currentPixelCoord - u_shapeCenter;
 
-            float distance_metric; // For disk: distance from center. For rect SDF: distance to surface.
+            float distance_metric;
             bool is_outside_shape_influence = false;
             bool is_in_flat_center = false;
             bool is_in_distorting_ring = false;
-            float ringT = 0.0; // Normalized position within the ring (0 at inner edge, 1 at outer edge)
+            float ringT = 0.0;
 
             if (u_shapeType == 0) { // Disk
                 distance_metric = length(p_relativeToCenter);
@@ -71,25 +132,24 @@ if (!gl) {
                     is_in_flat_center = true;
                 } else {
                     is_in_distorting_ring = true;
-                    if (u_distortingRingThickness > 0.001) { // Avoid division by zero
+                    if (u_distortingRingThickness > 0.001) {
                         ringT = (distance_metric - ring_inner_boundary_dist) / u_distortingRingThickness;
                     }
                 }
             } else if (u_shapeType == 1) { // Rounded Rectangle
-                // Ensure corner radius is not too large for the dimensions
                 float R = min(u_rectCornerRadius, min(u_rectSize.x*0.5, u_rectSize.y*0.5));
                 distance_metric = sdRoundedBox(p_relativeToCenter, u_rectSize * 0.5, R);
                 
-                float ring_outer_boundary_sdf = 0.0; // Surface of the rectangle
+                float ring_outer_boundary_sdf = 0.0;
                 float ring_inner_boundary_sdf = -u_distortingRingThickness;
 
-                if (distance_metric > ring_outer_boundary_sdf) { // Technically, > a small epsilon for antialiasing, but 0 is fine for this
+                if (distance_metric > ring_outer_boundary_sdf) {
                     is_outside_shape_influence = true;
                 } else if (distance_metric <= ring_inner_boundary_sdf) {
                     is_in_flat_center = true;
                 } else {
                     is_in_distorting_ring = true;
-                    if (u_distortingRingThickness > 0.001) { // Avoid division by zero
+                    if (u_distortingRingThickness > 0.001) {
                          ringT = (distance_metric - ring_inner_boundary_sdf) / u_distortingRingThickness;
                     }
                 }
@@ -98,48 +158,41 @@ if (!gl) {
             vec4 outputColor;
 
             if (is_outside_shape_influence) {
-                outputColor = getGridColor(currentPixelCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                outputColor = getBackgroundPatternColor(currentPixelCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
             } else {
                 vec2 sampleCoord = currentPixelCoord;
                 if (is_in_distorting_ring && u_refractionStrength > 0.0) {
-                    float distortionExponent = 2.0; 
+                    float distortionExponent = 2.0;
                     float distortionMagnitude = u_refractionStrength * pow(clamp(ringT, 0.0, 1.0), distortionExponent);
-                    sampleCoord = currentPixelCoord - normalize(p_relativeToCenter) * distortionMagnitude; 
-                                       // For rect, p_relativeToCenter might not be the best normal for displacement if inside.
-                                       // A proper normal would be dFdx/dFdy of the SDF. For simplicity, radial is used.
+                    sampleCoord = currentPixelCoord - normalize(p_relativeToCenter) * distortionMagnitude;
                 }
 
-                vec4 refractedGridColor = getGridColor(sampleCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
-                outputColor = mix(refractedGridColor, u_glassBaseColor, u_glassBaseColor.a);
-
-                // Highlights (apply to the entire shape, not just ring)
-                float edge_highlight_intensity = 0.0;
-                if (is_in_distorting_ring) { // Highlight stronger at the very edge of the ring
-                     edge_highlight_intensity = smoothstep(0.9, 1.0, clamp(ringT,0.0,1.0));
-                } else if (is_in_flat_center && u_shapeType == 0 && distance_metric > u_diskRadius - u_distortingRingThickness - 5.0) {
-                     // Slight highlight near the inner edge of flat disk part if ring is thin
-                } else if (is_in_flat_center && u_shapeType == 1 && distance_metric > -u_distortingRingThickness - 5.0) {
-                     // Slight highlight near inner edge of flat rect part
+                vec4 refractedBgColor;
+                if (u_frostiness > 0.1) {
+                    // Multi-sample blur for frosted glass effect
+                    vec4 sumColor = vec4(0.0);
+                    float sampleCount = 0.0;
+                    
+                    // Use a larger sampling pattern for better blur
+                    for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                            vec2 offset = vec2(float(x), float(y)) * u_frostiness * 0.5;
+                            vec2 samplePos = sampleCoord + offset;
+                            sumColor += getBackgroundPatternColor(samplePos, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                            sampleCount += 1.0;
+                        }
+                    }
+                    refractedBgColor = sumColor / sampleCount;
+                } else {
+                    refractedBgColor = getBackgroundPatternColor(sampleCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
                 }
 
+                outputColor = mix(refractedBgColor, u_glassBaseColor, u_glassBaseColor.a);
 
-                if (u_shapeType == 0) { // Disk specific highlight logic
-                    float outerEdgeFactor = smoothstep(u_diskRadius - 5.0, u_diskRadius, length(p_relativeToCenter));
-                     outputColor.rgb += vec3(0.1,0.1,0.12) * outerEdgeFactor * (1.0 - u_glassBaseColor.a) * edge_highlight_intensity;
-                } else if (u_shapeType == 1) { // Rect specific highlight logic
-                    // For rect, use SDF to determine closeness to edge for highlight
-                    float sdf_val = sdRoundedBox(p_relativeToCenter, u_rectSize * 0.5, min(u_rectCornerRadius, min(u_rectSize.x*0.5, u_rectSize.y*0.5)));
-                    float outerEdgeFactor = smoothstep(-5.0, 0.0, sdf_val); // Highlight when close to surface (sdf ~ 0)
-                    outputColor.rgb += vec3(0.1,0.1,0.12) * outerEdgeFactor * (1.0 - u_glassBaseColor.a) * edge_highlight_intensity;
-                }
-
-
-                float dotProd = dot(normalize(p_relativeToCenter), normalize(vec2(0.7,0.7)));
-                float generalHighlight = pow(max(0.0, dotProd), 20.0) * 0.1;
-                // Apply general highlight if not already strongly highlighted by edge effect
-                if ( (u_shapeType == 0 && length(p_relativeToCenter) < u_diskRadius * 0.95) ||
-                     (u_shapeType == 1 && sdRoundedBox(p_relativeToCenter, u_rectSize * 0.5, min(u_rectCornerRadius, min(u_rectSize.x*0.5, u_rectSize.y*0.5))) < -5.0) ) {
-                   outputColor.rgb += generalHighlight * (1.0 - u_glassBaseColor.a);
+                // Minimal edge highlight only (removed all other reflections)
+                if (is_in_distorting_ring) {
+                    float edgeGlow = smoothstep(0.85, 1.0, ringT) * 0.15;
+                    outputColor.rgb += vec3(edgeGlow);
                 }
             }
             gl_FragColor = outputColor;
@@ -185,7 +238,8 @@ if (!gl) {
         diskRadius: gl.getUniformLocation(shaderProgram, "u_diskRadius"),
         rectSize: gl.getUniformLocation(shaderProgram, "u_rectSize"),
         rectCornerRadius: gl.getUniformLocation(shaderProgram, "u_rectCornerRadius"),
-        distortingRingThickness: gl.getUniformLocation(shaderProgram, "u_distortingRingThickness")
+        distortingRingThickness: gl.getUniformLocation(shaderProgram, "u_distortingRingThickness"),
+        frostiness: gl.getUniformLocation(shaderProgram, "u_frostiness")
     };
 
     const positionBuffer = gl.createBuffer();
@@ -198,10 +252,11 @@ if (!gl) {
         rectWidth: 300,
         rectHeight: 200,
         rectCornerRadius: 30,
-        innerRadiusFactor: 0.8, // Determines non-distorting part relative to size
+        innerRadiusFactor: 0.8, 
         refractionStrength: 25.0,
         gridSpacing: 25.0,
-        glassBaseColor: [250/255, 250/255, 255/255, 0.10]
+        glassBaseColor: [250/255, 250/255, 255/255, 0.10],
+        frostiness: 0.0
     };
     
     let shapeCenterPos = { x: 0, y: 0 };
@@ -219,7 +274,8 @@ if (!gl) {
         innerRadiusFactor: { slider: document.getElementById('innerRadiusFactorSlider'), valueDisplay: document.getElementById('innerRadiusFactorValue') },
         refractionStrength: { slider: document.getElementById('refractionStrengthSlider'), valueDisplay: document.getElementById('refractionStrengthValue') },
         gridSpacing: { slider: document.getElementById('gridSpacingSlider'), valueDisplay: document.getElementById('gridSpacingValue') },
-        glassAlpha: { slider: document.getElementById('glassAlphaSlider'), valueDisplay: document.getElementById('glassAlphaValue') }
+        glassAlpha: { slider: document.getElementById('glassAlphaSlider'), valueDisplay: document.getElementById('glassAlphaValue') },
+        frostiness: { slider: document.getElementById('frostinessSlider'), valueDisplay: document.getElementById('frostinessValue') }
     };
 
     function updateControlsVisibility() {
@@ -241,13 +297,14 @@ if (!gl) {
             requestAnimationFrame(render);
         });
 
-        ['diskRadius', 'rectWidth', 'rectHeight', 'rectCornerRadius', 'innerRadiusFactor', 'refractionStrength', 'gridSpacing'].forEach(key => {
-            if (!ui[key]) return; // Skip if control doesn't exist (e.g. for common ones)
+        ['diskRadius', 'rectWidth', 'rectHeight', 'rectCornerRadius', 'innerRadiusFactor', 'refractionStrength', 'gridSpacing', 'frostiness'].forEach(key => {
+            if (!ui[key] || !ui[key].slider) return; 
             let paramKey = key;
             if (key === 'diskRadius') paramKey = 'diskPhysicalRadius'; // mapping
             else if (key === 'rectWidth') paramKey = 'rectWidth';
             else if (key === 'rectHeight') paramKey = 'rectHeight';
             else if (key === 'rectCornerRadius') paramKey = 'rectCornerRadius';
+            // frostiness maps directly to params.frostiness, no special paramKey needed
 
 
             ui[key].slider.value = params[paramKey];
@@ -318,6 +375,7 @@ if (!gl) {
         gl.uniform4fv(loc.glassBaseColor, params.glassBaseColor);
         
         gl.uniform1i(loc.shapeType, params.shapeType);
+        gl.uniform1f(loc.frostiness, params.frostiness);
 
         let currentDistortingRingThickness = 0;
         if (params.shapeType == 0) { // Disk
