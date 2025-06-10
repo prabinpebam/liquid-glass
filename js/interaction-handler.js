@@ -37,6 +37,7 @@ export class InteractionHandler {
     setupEventListeners() {
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
+        this.canvas.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
         document.addEventListener('mouseup', () => this.handleMouseUp());
         
         // Control panel drag
@@ -45,6 +46,7 @@ export class InteractionHandler {
         }
         
         document.addEventListener('mousemove', (e) => this.handleDocumentMouseMove(e));
+        document.addEventListener('click', (e) => this.hideContextMenu(e));
     }
 
     getCanvasMousePosition(e) {
@@ -325,5 +327,95 @@ export class InteractionHandler {
         // Handle dragging and resizing
         this.startDragOrResize(mousePos);
         e.preventDefault();
+    }
+
+    handleContextMenu(e) {
+        e.preventDefault();
+        
+        const mousePos = this.getCanvasMousePosition(e);
+        const imageIndex = this.findBackgroundImageAtPoint(mousePos.x, mousePos.y);
+        
+        if (imageIndex !== -1) {
+            this.showContextMenu(e.clientX, e.clientY, imageIndex);
+        } else {
+            this.hideContextMenu();
+        }
+    }
+
+    showContextMenu(x, y, imageIndex) {
+        this.hideContextMenu(); // Remove any existing context menu
+        
+        const contextMenu = document.createElement('div');
+        contextMenu.id = 'image-context-menu';
+        contextMenu.style.position = 'fixed';
+        contextMenu.style.left = `${x}px`;
+        contextMenu.style.top = `${y}px`;
+        contextMenu.style.backgroundColor = 'white';
+        contextMenu.style.border = '1px solid #ccc';
+        contextMenu.style.borderRadius = '6px';
+        contextMenu.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+        contextMenu.style.padding = '8px 0';
+        contextMenu.style.zIndex = '1000';
+        contextMenu.style.minWidth = '120px';
+        contextMenu.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        contextMenu.style.fontSize = '14px';
+        
+        const removeOption = document.createElement('div');
+        removeOption.textContent = 'Remove';
+        removeOption.style.padding = '8px 16px';
+        removeOption.style.cursor = 'pointer';
+        removeOption.style.color = '#dc3545';
+        removeOption.style.transition = 'background-color 0.15s ease';
+        
+        removeOption.addEventListener('mouseenter', () => {
+            removeOption.style.backgroundColor = '#f8f9fa';
+        });
+        
+        removeOption.addEventListener('mouseleave', () => {
+            removeOption.style.backgroundColor = 'transparent';
+        });
+        
+        removeOption.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.removeImage(imageIndex);
+            this.hideContextMenu();
+        });
+        
+        contextMenu.appendChild(removeOption);
+        document.body.appendChild(contextMenu);
+    }
+
+    hideContextMenu() {
+        const existingMenu = document.getElementById('image-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+    }
+
+    removeImage(imageIndex) {
+        if (imageIndex >= 0 && imageIndex < this.backgroundImagesData.length) {
+            // Clean up WebGL texture
+            if (this.backgroundImagesData[imageIndex].texture) {
+                const gl = this.getGL();
+                if (gl) {
+                    gl.deleteTexture(this.backgroundImagesData[imageIndex].texture);
+                }
+            }
+            
+            // Remove from array
+            this.backgroundImagesData.splice(imageIndex, 1);
+            
+            // Re-render the scene
+            this.renderCallback();
+        }
+    }
+
+    // Method to get GL context (needs to be set from main app)
+    setGL(gl) {
+        this.gl = gl;
+    }
+
+    getGL() {
+        return this.gl;
     }
 }

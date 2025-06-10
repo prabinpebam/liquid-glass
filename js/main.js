@@ -42,7 +42,7 @@ class LiquidGlassApp {
     initializePositions() {
         return {
             liquidGlassCenterPosition: { x: 0, y: 0 },
-            controlPanelPosition: { x: 0, y: 0 },
+            controlPanelPosition: { x: 0, y: 0 }, // Will be set in updateElementPositions
             controlPanelSize: { x: 340, y: 500 },
             addImageButtonPosition: { x: 100, y: 100 },
             addImageButtonSize: { x: 50, y: 50 },
@@ -86,40 +86,72 @@ class LiquidGlassApp {
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), this.gl.STATIC_DRAW);
         
-        // Load default iPhone image
-        this.loadDefaultImage();
+        // Load default images
+        this.loadDefaultImages();
     }
 
-    loadDefaultImage() {
-        const img = new Image();
-        img.onload = () => {
-            // Create WebGL texture
-            const texture = this.gl.createTexture();
-            this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-            this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
-            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
-            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
-            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+    loadDefaultImages() {
+        const imagesToLoad = ['assets/iphone.PNG', 'assets/lingjel.png'];
+        let loadedCount = 0;
+        const totalImages = imagesToLoad.length;
+        const imageData = [];
 
-            const aspectRatio = img.width / img.height;
-            const width = 600;
-            const height = width / aspectRatio;
+        imagesToLoad.forEach((src, index) => {
+            const img = new Image();
+            img.onload = () => {
+                // Create WebGL texture
+                const texture = this.gl.createTexture();
+                this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+                this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+                this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
 
+                const aspectRatio = img.width / img.height;
+                const width = 500;
+                const height = width / aspectRatio;
+
+                imageData[index] = {
+                    texture: texture,
+                    aspectRatio: aspectRatio,
+                    size: { x: width, y: height }
+                };
+
+                loadedCount++;
+                if (loadedCount === totalImages) {
+                    this.positionDefaultImages(imageData);
+                }
+            };
+            img.src = src;
+        });
+    }
+
+    positionDefaultImages(imageData) {
+        const spacing = 50; // 50px space between images
+        const totalWidth = imageData.reduce((sum, img) => sum + img.size.x, 0) + spacing * (imageData.length - 1);
+        
+        // Center the group horizontally
+        let currentX = (this.canvas.width - totalWidth) / 2;
+        
+        imageData.forEach((imgData) => {
+            // Center each image vertically
+            const y = (this.canvas.height - imgData.size.y) / 2;
+            
             const backgroundImageData = {
-                texture: texture,
-                aspectRatio: aspectRatio,
-                position: { 
-                    x: (this.canvas.width - width) / 2, 
-                    y: (this.canvas.height - height) / 2 
-                },
-                size: { x: width, y: height }
+                texture: imgData.texture,
+                aspectRatio: imgData.aspectRatio,
+                position: { x: currentX, y: y },
+                size: { x: imgData.size.x, y: imgData.size.y }
             };
             
             this.backgroundImagesData.push(backgroundImageData);
-            this.render();
-        };
-        img.src = 'assets/iphone.PNG';
+            
+            // Move to next position
+            currentX += imgData.size.x + spacing;
+        });
+        
+        this.render();
     }
 
     setupUI() {
@@ -141,6 +173,7 @@ class LiquidGlassApp {
             () => this.render(),
             this.backgroundImagesData // Pass background images data
         );
+        this.interactionHandler.setGL(this.gl); // Provide GL context for texture cleanup
         this.interactionHandler.initialize();
         
         window.addEventListener('resize', () => this.resizeCanvas());
@@ -162,11 +195,19 @@ class LiquidGlassApp {
         this.positions.gridControlsPosition.x = this.positions.addImageButtonPosition.x + this.positions.addImageButtonSize.x * 0.5 + gapBetweenElements + this.positions.gridControlsSize.x * 0.5;
         this.positions.gridControlsPosition.y = this.positions.addImageButtonPosition.y;
         
-        // Re-center default image if it exists
-        if (this.backgroundImagesData.length > 0) {
-            const firstImage = this.backgroundImagesData[0];
-            firstImage.position.x = (this.canvas.width - firstImage.size.x) / 2;
-            firstImage.position.y = (this.canvas.height - firstImage.size.y) / 2;
+        // Re-center default images if they exist
+        if (this.backgroundImagesData.length >= 2) {
+            const spacing = 50;
+            const totalWidth = this.backgroundImagesData[0].size.x + this.backgroundImagesData[1].size.x + spacing;
+            let currentX = (this.canvas.width - totalWidth) / 2;
+            
+            this.backgroundImagesData.forEach((img, index) => {
+                if (index < 2) { // Only reposition the first two default images
+                    img.position.x = currentX;
+                    img.position.y = (this.canvas.height - img.size.y) / 2;
+                    currentX += img.size.x + spacing;
+                }
+            });
         }
         
         this.updateElementPositions();
@@ -180,8 +221,16 @@ class LiquidGlassApp {
         
         this.positions.controlPanelSize.x = htmlPaneRect.width;
         this.positions.controlPanelSize.y = htmlPaneRect.height;
-        this.positions.controlPanelPosition.x = (htmlPaneRect.left - canvasRect.left) + this.positions.controlPanelSize.x * 0.5;
-        this.positions.controlPanelPosition.y = this.canvas.height - (htmlPaneRect.top - canvasRect.top) - this.positions.controlPanelSize.y * 0.5;
+        
+        // On initial load, position control panel in middle right with 50px gap
+        if (this.positions.controlPanelPosition.x === 0 && this.positions.controlPanelPosition.y === 0) {
+            this.positions.controlPanelPosition.x = this.canvas.width - 50 - this.positions.controlPanelSize.x * 0.5;
+            this.positions.controlPanelPosition.y = this.canvas.height * 0.5;
+        } else {
+            // Update from current HTML position (when dragging)
+            this.positions.controlPanelPosition.x = (htmlPaneRect.left - canvasRect.left) + this.positions.controlPanelSize.x * 0.5;
+            this.positions.controlPanelPosition.y = this.canvas.height - (htmlPaneRect.top - canvasRect.top) - this.positions.controlPanelSize.y * 0.5;
+        }
         
         // Update icon positions
         this.updateIconPositions();
