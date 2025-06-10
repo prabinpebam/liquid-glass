@@ -34,7 +34,7 @@
         
         <div class="control-group">
             <label for="innerRadiusFactorSlider">Edge distortion thickness: <span id="innerRadiusFactorValue"></span>px</label>
-            <input type="range" id="innerRadiusFactorSlider" min="5" max="100" step="1" value="30">
+            <input type="range" id="innerRadiusFactorSlider" min="5" max="100" step="1" value="16">
         </div>
         
         <div class="control-group">
@@ -51,28 +51,28 @@
             <label for="frostinessSlider">Frostiness: <span id="frostinessValue"></span></label>
             <input type="range" id="frostinessSlider" min="0" max="10" step="0.1" value="1">
         </div>
-        
-        <!-- Grid Controls Panel -->
-        <div id="grid-controls-panel" class="grid-controls">
-            <div class="grid-control-item">
-                <label class="toggle-switch">
-                    <input type="checkbox" id="gridToggle" checked>
-                    <span class="toggle-slider"></span>
-                </label>
-            </div>
-            <div class="grid-control-item">
-                <input type="range" id="gridSpacingSlider" min="10" max="100" step="1" value="25" class="grid-spacing-slider">
-            </div>
-        </div>
-
-        <!-- Icons overlaid on glass elements -->
-        <img id="add-image-icon" src="assets/add-image.svg" alt="Add Image" class="glass-icon">
-        <img id="grid-icon" src="assets/show-grid.svg" alt="Grid Controls" class="glass-icon">
-        
-        <!-- Hidden file input for image upload -->
-        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
-
-        <script type="module" src="js/main.js"></script>
     </div>
+
+    <!-- Grid Controls Panel (separate from controls pane) -->
+    <div id="grid-controls-panel" class="grid-controls">
+        <div class="grid-control-item">
+            <label class="toggle-switch">
+                <input type="checkbox" id="gridToggle" checked>
+                <span class="toggle-slider"></span>
+            </label>
+        </div>
+        <div class="grid-control-item">
+            <input type="range" id="gridSpacingSlider" min="10" max="100" step="1" value="25" class="grid-spacing-slider">
+        </div>
+    </div>
+
+    <!-- Icons overlaid on glass elements -->
+    <img id="add-image-icon" src="assets/add-image.svg" alt="Add Image" class="glass-icon">
+    <img id="grid-icon" src="assets/show-grid.svg" alt="Grid Controls" class="glass-icon">
+    
+    <!-- Hidden file input for image upload -->
+    <input type="file" id="imageUpload" accept="image/*" style="display: none;">
+
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>

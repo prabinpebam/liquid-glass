@@ -105,10 +105,20 @@ export class UIControls {
 
         const img = new Image();
         img.onload = () => {
-            // Create WebGL texture - this will need to be handled by the main app
+            // Create WebGL texture
+            const gl = this.getGL(); // Need to access GL context from main app
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
             const aspectRatio = img.width / img.height;
             const backgroundImageData = {
-                image: img, // Store image for texture creation
+                texture: texture,
+                aspectRatio: aspectRatio, // Store aspect ratio for constrained resizing
                 position: { x: 100 + this.backgroundImagesData.length * 50, y: 100 + this.backgroundImagesData.length * 50 },
                 size: { x: 300, y: 300 / aspectRatio }
             };
@@ -119,6 +129,15 @@ export class UIControls {
         img.src = URL.createObjectURL(file);
         
         event.target.value = '';
+    }
+
+    // Method to be called from main app to provide GL context
+    setGL(gl) {
+        this.gl = gl;
+    }
+
+    getGL() {
+        return this.gl;
     }
 
     getUIElements() {

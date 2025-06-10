@@ -20,7 +20,7 @@ class LiquidGlassApp {
             rectangleWidth: 300,
             rectangleHeight: 200,
             rectangleCornerRadius: 30,
-            edgeDistortionThickness: 30,
+            edgeDistortionThickness: 16, // Changed from 30 to 16px
             refractionStrength: 25.0,
             gridSpacing: 25.0,
             glassBaseColor: [250/255, 250/255, 255/255, 0.1],
@@ -85,6 +85,41 @@ class LiquidGlassApp {
         this.positionBuffer = this.gl.createBuffer();
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, 1]), this.gl.STATIC_DRAW);
+        
+        // Load default iPhone image
+        this.loadDefaultImage();
+    }
+
+    loadDefaultImage() {
+        const img = new Image();
+        img.onload = () => {
+            // Create WebGL texture
+            const texture = this.gl.createTexture();
+            this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+            this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+            this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+
+            const aspectRatio = img.width / img.height;
+            const width = 600;
+            const height = width / aspectRatio;
+
+            const backgroundImageData = {
+                texture: texture,
+                aspectRatio: aspectRatio,
+                position: { 
+                    x: (this.canvas.width - width) / 2, 
+                    y: (this.canvas.height - height) / 2 
+                },
+                size: { x: width, y: height }
+            };
+            
+            this.backgroundImagesData.push(backgroundImageData);
+            this.render();
+        };
+        img.src = 'assets/iphone.PNG';
     }
 
     setupUI() {
@@ -93,6 +128,7 @@ class LiquidGlassApp {
             this.backgroundImagesData,
             () => this.render()
         );
+        this.uiControls.setGL(this.gl); // Provide GL context to UI controls
         this.uiControls.initialize();
     }
 
@@ -102,7 +138,8 @@ class LiquidGlassApp {
             this.liquidGlassParams,
             this.positions,
             this.uiControls.getUIElements(),
-            () => this.render()
+            () => this.render(),
+            this.backgroundImagesData // Pass background images data
         );
         this.interactionHandler.initialize();
         
@@ -124,6 +161,13 @@ class LiquidGlassApp {
         const gapBetweenElements = 20;
         this.positions.gridControlsPosition.x = this.positions.addImageButtonPosition.x + this.positions.addImageButtonSize.x * 0.5 + gapBetweenElements + this.positions.gridControlsSize.x * 0.5;
         this.positions.gridControlsPosition.y = this.positions.addImageButtonPosition.y;
+        
+        // Re-center default image if it exists
+        if (this.backgroundImagesData.length > 0) {
+            const firstImage = this.backgroundImagesData[0];
+            firstImage.position.x = (this.canvas.width - firstImage.size.x) / 2;
+            firstImage.position.y = (this.canvas.height - firstImage.size.y) / 2;
+        }
         
         this.updateElementPositions();
         this.render();
@@ -193,6 +237,32 @@ class LiquidGlassApp {
         gl.uniform1i(u.showGrid, this.liquidGlassParams.showGrid);
         gl.uniform1i(u.hasBackgroundImages, this.backgroundImagesData.length > 0);
         gl.uniform1i(u.backgroundImageCount, this.backgroundImagesData.length);
+
+        // Set up background image textures
+        for (let i = 0; i < 8; i++) {
+            if (i < this.backgroundImagesData.length) {
+                gl.activeTexture(gl.TEXTURE0 + i);
+                gl.bindTexture(gl.TEXTURE_2D, this.backgroundImagesData[i].texture);
+                gl.uniform1i(u.backgroundImageTextures[i], i);
+            }
+        }
+        
+        // Set background image positions and sizes
+        if (this.backgroundImagesData.length > 0) {
+            const positions = [];
+            const sizes = [];
+            for (let i = 0; i < 8; i++) {
+                if (i < this.backgroundImagesData.length) {
+                    positions.push(this.backgroundImagesData[i].position.x, this.backgroundImagesData[i].position.y);
+                    sizes.push(this.backgroundImagesData[i].size.x, this.backgroundImagesData[i].size.y);
+                } else {
+                    positions.push(0, 0);
+                    sizes.push(0, 0);
+                }
+            }
+            gl.uniform2fv(u.backgroundImagePositions, positions);
+            gl.uniform2fv(u.backgroundImageSizes, sizes);
+        }
 
         // Control panel uniforms
         gl.uniform2f(u.controlPanelCenter, this.positions.controlPanelPosition.x, this.positions.controlPanelPosition.y);

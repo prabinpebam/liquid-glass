@@ -74,7 +74,16 @@ export const fragmentShaderSource = `
     vec4 renderBackground(vec2 coord, float spacing, vec4 gridLineCol, vec4 pageBgCol) {
         vec4 backgroundColor = pageBgCol;
 
-        // Render background images
+        // First overlay grid lines if enabled (behind images)
+        if (u_showGrid) {
+            vec2 gridPos = mod(coord, spacing);
+            float lineThickness = 1.0;
+            if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
+                backgroundColor = mix(backgroundColor, gridLineCol, 1.0);
+            }
+        }
+
+        // Then render background images on top of grid
         for (int i = 0; i < 8; i++) {
             if (i >= u_backgroundImageCount) break;
             
@@ -97,15 +106,6 @@ export const fragmentShaderSource = `
                 else if (i == 7) imageColor = texture2D(u_backgroundImageTextures[7], uv);
                 
                 backgroundColor = mix(backgroundColor, imageColor, imageColor.a);
-            }
-        }
-
-        // Overlay grid lines if enabled
-        if (u_showGrid) {
-            vec2 gridPos = mod(coord, spacing);
-            float lineThickness = 1.0;
-            if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
-                backgroundColor = mix(backgroundColor, gridLineCol, 1.0);
             }
         }
 
@@ -222,7 +222,7 @@ export const fragmentShaderSource = `
             refractedBackground = totalColor / sampleCount;
 
             // Mix with control panel glass tint
-            vec4 controlPanelGlassTint = vec4(250.0/255.0, 250.0/255.0, 255.0/255.0, 0.01);
+            vec4 controlPanelGlassTint = vec4(250.0/255.0, 250.0/255.0, 255.0/255.0, 0.1);
             finalColor = mix(refractedBackground, controlPanelGlassTint, controlPanelGlassTint.a);
 
             // Add subtle edge glow for control panel

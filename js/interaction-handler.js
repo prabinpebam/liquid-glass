@@ -3,12 +3,13 @@
  */
 
 export class InteractionHandler {
-    constructor(canvas, liquidGlassParams, positions, uiElements, renderCallback) {
+    constructor(canvas, liquidGlassParams, positions, uiElements, renderCallback, backgroundImagesData) {
         this.canvas = canvas;
         this.liquidGlassParams = liquidGlassParams;
         this.positions = positions;
         this.uiElements = uiElements;
         this.renderCallback = renderCallback;
+        this.backgroundImagesData = backgroundImagesData; // Add background images data
         
         // Interaction state
         this.isElementDragging = false;
@@ -90,51 +91,15 @@ export class InteractionHandler {
         return Math.abs(dx) <= halfW && Math.abs(dy) <= halfH;
     }
 
-    handleMouseMove(e) {
-        if (this.isControlPanelDragging) return;
-        
-        if (this.isElementDragging) {
-            const mousePos = this.getCanvasMousePosition(e);
-            const dx = mousePos.x - this.dragStartX;
-            const dy = mousePos.y - this.dragStartY;
-            
-            if (this.dragTarget === 'liquidGlass') {
-                this.positions.liquidGlassCenterPosition.x = this.initialLiquidGlassCenterX + dx;
-                this.positions.liquidGlassCenterPosition.y = this.initialLiquidGlassCenterY + dy;
+    findBackgroundImageAtPoint(x, y) {
+        for (let i = this.backgroundImagesData.length - 1; i >= 0; i--) { // Check from top to bottom
+            const img = this.backgroundImagesData[i];
+            if (x >= img.position.x && x <= img.position.x + img.size.x &&
+                y >= img.position.y && y <= img.position.y + img.size.y) {
+                return i;
             }
-            this.renderCallback();
-        } else if (this.isElementResizing) {
-            const mousePos = this.getCanvasMousePosition(e);
-            const dx = mousePos.x - this.dragStartX;
-            const dy = mousePos.y - this.dragStartY;
-            
-            if (this.resizeHandle === 'liquidGlass') {
-                this.liquidGlassParams.rectangleWidth = Math.max(50, this.initialElementSize.x + dx);
-                this.liquidGlassParams.rectangleHeight = Math.max(50, this.initialElementSize.y + dy);
-                
-                // Update UI controls
-                this.uiElements.rectangleWidthControl.slider.value = this.liquidGlassParams.rectangleWidth;
-                this.uiElements.rectangleWidthControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleWidth);
-                this.uiElements.rectangleHeightControl.slider.value = this.liquidGlassParams.rectangleHeight;
-                this.uiElements.rectangleHeightControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleHeight);
-            }
-            this.renderCallback();
-        } else {
-            this.updateCursor(e);
         }
-    }
-
-    updateCursor(e) {
-        const mousePos = this.getCanvasMousePosition(e);
-        const resizeHandleType = this.getActiveResizeHandle(mousePos.x, mousePos.y);
-        
-        if (resizeHandleType !== null) {
-            this.canvas.style.cursor = 'nw-resize';
-        } else if (this.isPointInsideLiquidGlass(mousePos.x, mousePos.y)) {
-            this.canvas.style.cursor = 'grab';
-        } else {
-            this.canvas.style.cursor = 'default';
-        }
+        return -1;
     }
 
     getActiveResizeHandle(x, y) {
@@ -151,47 +116,76 @@ export class InteractionHandler {
             }
         }
         
+        // Check background image resize handles (bottom-right corner)
+        for (let i = this.backgroundImagesData.length - 1; i >= 0; i--) {
+            const img = this.backgroundImagesData[i];
+            const imgRight = img.position.x + img.size.x;
+            const imgTop = img.position.y + img.size.y;
+            
+            if (Math.abs(x - imgRight) < edgeThreshold && Math.abs(y - imgTop) < edgeThreshold) {
+                return i;
+            }
+        }
+        
         return null;
     }
 
-    handleMouseDown(e) {
+    handleMouseMove(e) {
         if (this.isControlPanelDragging) return;
         
-        const mousePos = this.getCanvasMousePosition(e);
-        
-        // Check button clicks
-        if (this.isPointInsideAddImageButton(mousePos.x, mousePos.y)) {
-            this.uiElements.backgroundImageUpload?.click();
-            return;
-        }
-
-        if (this.isPointInsideGridToggleButton(mousePos.x, mousePos.y)) {
-            this.liquidGlassParams.showGrid = !this.liquidGlassParams.showGrid;
-            if (this.uiElements.gridToggle) {
-                this.uiElements.gridToggle.checked = this.liquidGlassParams.showGrid;
-            }
-            this.renderCallback();
-            return;
-        }
-
-        if (this.isPointInsideGridSpacingSlider(mousePos.x, mousePos.y)) {
-            const sliderAreaWidth = 150;
-            const sliderStartX = this.positions.gridControlsPosition.x + this.positions.gridControlsSize.x * 0.5 - sliderAreaWidth;
-            const relativeX = mousePos.x - sliderStartX;
-            const normalizedX = relativeX / sliderAreaWidth;
-            const newSpacing = 10 + (normalizedX * 90);
-            this.liquidGlassParams.gridSpacing = Math.max(10, Math.min(100, newSpacing));
+        if (this.isElementDragging) {
+            const mousePos = this.getCanvasMousePosition(e);
+            const dx = mousePos.x - this.dragStartX;
+            const dy = mousePos.y - this.dragStartY;
             
-            if (this.uiElements.gridSpacingSlider) {
-                this.uiElements.gridSpacingSlider.value = this.liquidGlassParams.gridSpacing;
+            if (this.dragTarget === 'liquidGlass') {
+                this.positions.liquidGlassCenterPosition.x = this.initialLiquidGlassCenterX + dx;
+                this.positions.liquidGlassCenterPosition.y = this.initialLiquidGlassCenterY + dy;
+            } else if (typeof this.dragTarget === 'number') {
+                this.backgroundImagesData[this.dragTarget].position.x = this.initialBackgroundImagePos.x + dx;
+                this.backgroundImagesData[this.dragTarget].position.y = this.initialBackgroundImagePos.y + dy;
             }
             this.renderCallback();
-            return;
+        } else if (this.isElementResizing) {
+            const mousePos = this.getCanvasMousePosition(e);
+            const dx = mousePos.x - this.dragStartX;
+            const dy = mousePos.y - this.dragStartY;
+            
+            if (this.resizeHandle === 'liquidGlass') {
+                this.liquidGlassParams.rectangleWidth = Math.max(50, this.initialElementSize.x + dx);
+                this.liquidGlassParams.rectangleHeight = Math.max(50, this.initialElementSize.y + dy);
+                
+                // Update UI controls
+                this.uiElements.rectangleWidthControl.slider.value = this.liquidGlassParams.rectangleWidth;
+                this.uiElements.rectangleWidthControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleWidth);
+                this.uiElements.rectangleHeightControl.slider.value = this.liquidGlassParams.rectangleHeight;
+                this.uiElements.rectangleHeightControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleHeight);
+            } else if (typeof this.resizeHandle === 'number') {
+                // Background image resize with aspect ratio constraint
+                const img = this.backgroundImagesData[this.resizeHandle];
+                const newWidth = Math.max(50, this.initialElementSize.x + dx);
+                const newHeight = newWidth / img.aspectRatio; // Maintain aspect ratio
+                
+                img.size.x = newWidth;
+                img.size.y = newHeight;
+            }
+            this.renderCallback();
+        } else {
+            this.updateCursor(e);
         }
+    }
 
-        // Handle dragging and resizing
-        this.startDragOrResize(mousePos);
-        e.preventDefault();
+    updateCursor(e) {
+        const mousePos = this.getCanvasMousePosition(e);
+        const resizeHandleType = this.getActiveResizeHandle(mousePos.x, mousePos.y);
+        
+        if (resizeHandleType !== null) {
+            this.canvas.style.cursor = 'nw-resize';
+        } else if (this.isPointInsideLiquidGlass(mousePos.x, mousePos.y) || this.findBackgroundImageAtPoint(mousePos.x, mousePos.y) !== -1) {
+            this.canvas.style.cursor = 'grab';
+        } else {
+            this.canvas.style.cursor = 'default';
+        }
     }
 
     startDragOrResize(mousePos) {
@@ -207,6 +201,8 @@ export class InteractionHandler {
             
             if (resizeHandleType === 'liquidGlass') {
                 this.initialElementSize = { x: this.liquidGlassParams.rectangleWidth, y: this.liquidGlassParams.rectangleHeight };
+            } else {
+                this.initialElementSize = { ...this.backgroundImagesData[resizeHandleType].size };
             }
         } else if (this.isPointInsideLiquidGlass(mousePos.x, mousePos.y)) {
             this.isElementDragging = true;
@@ -214,6 +210,14 @@ export class InteractionHandler {
             this.canvas.style.cursor = 'grabbing';
             this.initialLiquidGlassCenterX = this.positions.liquidGlassCenterPosition.x;
             this.initialLiquidGlassCenterY = this.positions.liquidGlassCenterPosition.y;
+        } else {
+            const imageIndex = this.findBackgroundImageAtPoint(mousePos.x, mousePos.y);
+            if (imageIndex !== -1) {
+                this.isElementDragging = true;
+                this.dragTarget = imageIndex;
+                this.canvas.style.cursor = 'grabbing';
+                this.initialBackgroundImagePos = { ...this.backgroundImagesData[imageIndex].position };
+            }
         }
     }
 
@@ -275,5 +279,51 @@ export class InteractionHandler {
             this.resizeHandle = null;
             this.canvas.style.cursor = 'default';
         }
+    }
+
+    handleMouseDown(e) {
+        // Only handle canvas interactions if not dragging control panel
+        if (this.isControlPanelDragging) return;
+        
+        const mousePos = this.getCanvasMousePosition(e);
+        
+        // Check if clicking on add image button
+        if (this.isPointInsideAddImageButton(mousePos.x, mousePos.y)) {
+            if (this.uiElements.backgroundImageUpload) {
+                this.uiElements.backgroundImageUpload.click();
+            }
+            return;
+        }
+
+        // Check if clicking on grid toggle button
+        if (this.isPointInsideGridToggleButton(mousePos.x, mousePos.y)) {
+            this.liquidGlassParams.showGrid = !this.liquidGlassParams.showGrid;
+            if (this.uiElements.gridToggle) {
+                this.uiElements.gridToggle.checked = this.liquidGlassParams.showGrid;
+            }
+            this.renderCallback();
+            return;
+        }
+
+        // Check if clicking on grid spacing slider
+        if (this.isPointInsideGridSpacingSlider(mousePos.x, mousePos.y)) {
+            // Handle grid spacing adjustment based on click position within the slider area
+            const sliderAreaWidth = 150;
+            const sliderStartX = this.positions.gridControlsPosition.x + this.positions.gridControlsSize.x * 0.5 - sliderAreaWidth;
+            const relativeX = mousePos.x - sliderStartX;
+            const normalizedX = relativeX / sliderAreaWidth;
+            const newSpacing = 10 + (normalizedX * 90); // Range: 10-100
+            this.liquidGlassParams.gridSpacing = Math.max(10, Math.min(100, newSpacing));
+            
+            if (this.uiElements.gridSpacingSlider) {
+                this.uiElements.gridSpacingSlider.value = this.liquidGlassParams.gridSpacing;
+            }
+            this.renderCallback();
+            return;
+        }
+
+        // Handle dragging and resizing
+        this.startDragOrResize(mousePos);
+        e.preventDefault();
     }
 }
