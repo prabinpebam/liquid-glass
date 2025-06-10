@@ -27,9 +27,10 @@ if (!gl) {
         uniform float u_frostiness;
         uniform bool u_showGrid;
         uniform bool u_hasImage;
-        uniform sampler2D u_imageTexture;
-        uniform vec2 u_imagePosition;
-        uniform vec2 u_imageSize;
+        uniform sampler2D u_imageTextures[8];
+        uniform vec2 u_imagePositions[8];
+        uniform vec2 u_imageSizes[8];
+        uniform int u_imageCount;
 
         // Shape specific uniforms
         uniform int u_shapeType;
@@ -37,6 +38,12 @@ if (!gl) {
         uniform vec2 u_rectSize;
         uniform float u_rectCornerRadius;
         uniform float u_distortingRingThickness;
+
+        // Control pane uniforms
+        uniform vec2 u_controlPaneCenter;
+        uniform vec2 u_controlPaneSize;
+        uniform float u_controlPaneCornerRadius;
+        uniform float u_controlPaneDistortingRingThickness;
 
         float sdRoundedBox( vec2 p, vec2 b, float r ) {
             vec2 q = abs(p) - b + r;
@@ -46,16 +53,28 @@ if (!gl) {
         vec4 getBackgroundPatternColor(vec2 coord, float spacing, vec4 gridLineCol, vec4 pageBgCol) {
             vec4 color = pageBgCol;
 
-            // Draw uploaded image if available
-            if (u_hasImage) {
-                vec2 imageMin = u_imagePosition;
-                vec2 imageMax = u_imagePosition + u_imageSize;
+            // Draw uploaded images if available
+            for (int i = 0; i < 8; i++) {
+                if (i >= u_imageCount) break;
+                
+                vec2 imageMin = u_imagePositions[i];
+                vec2 imageMax = u_imagePositions[i] + u_imageSizes[i];
                 
                 if (coord.x >= imageMin.x && coord.x <= imageMax.x && 
                     coord.y >= imageMin.y && coord.y <= imageMax.y) {
-                    vec2 uv = (coord - imageMin) / u_imageSize;
+                    vec2 uv = (coord - imageMin) / u_imageSizes[i];
                     uv.y = 1.0 - uv.y; // Flip Y for texture sampling
-                    vec4 imageColor = texture2D(u_imageTexture, uv);
+                    
+                    vec4 imageColor;
+                    if (i == 0) imageColor = texture2D(u_imageTextures[0], uv);
+                    else if (i == 1) imageColor = texture2D(u_imageTextures[1], uv);
+                    else if (i == 2) imageColor = texture2D(u_imageTextures[2], uv);
+                    else if (i == 3) imageColor = texture2D(u_imageTextures[3], uv);
+                    else if (i == 4) imageColor = texture2D(u_imageTextures[4], uv);
+                    else if (i == 5) imageColor = texture2D(u_imageTextures[5], uv);
+                    else if (i == 6) imageColor = texture2D(u_imageTextures[6], uv);
+                    else if (i == 7) imageColor = texture2D(u_imageTextures[7], uv);
+                    
                     color = mix(color, imageColor, imageColor.a);
                 }
             }
@@ -65,7 +84,7 @@ if (!gl) {
                 vec2 gridPos = mod(coord, spacing);
                 float lineThickness = 1.0;
                 if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
-                    color = mix(color, gridLineCol, gridLineCol.a * 0.8);
+                    color = mix(color, gridLineCol, 1.0); // Make grid more visible
                 }
             }
 
@@ -82,6 +101,25 @@ if (!gl) {
             bool is_in_distorting_ring = false;
             float ringT = 0.0;
 
+            // Check if we're in the control pane first
+            vec2 p_relativeToControlPane = currentPixelCoord - u_controlPaneCenter;
+            float controlPaneSDF = sdRoundedBox(p_relativeToControlPane, u_controlPaneSize * 0.5, u_controlPaneCornerRadius);
+            
+            bool is_in_control_pane = false;
+            bool is_in_control_pane_ring = false;
+            float controlPaneRingT = 0.0;
+            
+            if (controlPaneSDF <= 0.0) {
+                is_in_control_pane = true;
+                if (controlPaneSDF > -u_controlPaneDistortingRingThickness) {
+                    is_in_control_pane_ring = true;
+                    if (u_controlPaneDistortingRingThickness > 0.001) {
+                        controlPaneRingT = (controlPaneSDF + u_controlPaneDistortingRingThickness) / u_controlPaneDistortingRingThickness;
+                    }
+                }
+            }
+
+            // Main shape calculations
             if (u_shapeType == 0) { // Disk
                 distance_metric = length(p_relativeToCenter);
                 float ring_outer_boundary_dist = u_diskRadius;
@@ -118,7 +156,41 @@ if (!gl) {
 
             vec4 outputColor;
 
-            if (is_outside_shape_influence) {
+            if (is_in_control_pane) {
+                // Render control pane glass effect
+                vec2 sampleCoord = currentPixelCoord;
+                if (is_in_control_pane_ring) {
+                    float distortionExponent = 2.0;
+                    float distortionMagnitude = 25.0 * pow(clamp(controlPaneRingT, 0.0, 1.0), distortionExponent);
+                    sampleCoord = currentPixelCoord - normalize(p_relativeToControlPane) * distortionMagnitude;
+                }
+
+                vec4 refractedBgColor;
+                if (1.0 > 0.1) { // Frostiness for control pane
+                    vec4 sumColor = vec4(0.0);
+                    float sampleCount = 0.0;
+                    
+                    for (int x = -2; x <= 2; x++) {
+                        for (int y = -2; y <= 2; y++) {
+                            vec2 offset = vec2(float(x), float(y)) * 1.0 * 0.5;
+                            vec2 samplePos = sampleCoord + offset;
+                            sumColor += getBackgroundPatternColor(samplePos, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                            sampleCount += 1.0;
+                        }
+                    }
+                    refractedBgColor = sumColor / sampleCount;
+                } else {
+                    refractedBgColor = getBackgroundPatternColor(sampleCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                }
+
+                vec4 controlPaneGlassColor = vec4(250.0/255.0, 250.0/255.0, 255.0/255.0, 0.01);
+                outputColor = mix(refractedBgColor, controlPaneGlassColor, controlPaneGlassColor.a);
+
+                if (is_in_control_pane_ring) {
+                    float edgeGlow = smoothstep(0.85, 1.0, controlPaneRingT) * 0.15;
+                    outputColor.rgb += vec3(edgeGlow);
+                }
+            } else if (is_outside_shape_influence) {
                 outputColor = getBackgroundPatternColor(currentPixelCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
             } else {
                 vec2 sampleCoord = currentPixelCoord;
@@ -200,10 +272,20 @@ if (!gl) {
         frostiness: gl.getUniformLocation(shaderProgram, "u_frostiness"),
         showGrid: gl.getUniformLocation(shaderProgram, "u_showGrid"),
         hasImage: gl.getUniformLocation(shaderProgram, "u_hasImage"),
-        imageTexture: gl.getUniformLocation(shaderProgram, "u_imageTexture"),
-        imagePosition: gl.getUniformLocation(shaderProgram, "u_imagePosition"),
-        imageSize: gl.getUniformLocation(shaderProgram, "u_imageSize")
+        imageTextures: [],
+        imagePositions: gl.getUniformLocation(shaderProgram, "u_imagePositions"),
+        imageSizes: gl.getUniformLocation(shaderProgram, "u_imageSizes"),
+        imageCount: gl.getUniformLocation(shaderProgram, "u_imageCount"),
+        controlPaneCenter: gl.getUniformLocation(shaderProgram, "u_controlPaneCenter"),
+        controlPaneSize: gl.getUniformLocation(shaderProgram, "u_controlPaneSize"),
+        controlPaneCornerRadius: gl.getUniformLocation(shaderProgram, "u_controlPaneCornerRadius"),
+        controlPaneDistortingRingThickness: gl.getUniformLocation(shaderProgram, "u_controlPaneDistortingRingThickness")
     };
+
+    // Initialize texture uniform locations
+    for (let i = 0; i < 8; i++) {
+        loc.imageTextures[i] = gl.getUniformLocation(shaderProgram, `u_imageTextures[${i}]`);
+    }
 
     const positionBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
@@ -224,14 +306,31 @@ if (!gl) {
     };
     
     let shapeCenterPos = { x: 0, y: 0 };
-    let imageData = {
-        texture: null,
-        position: { x: 100, y: 100 },
-        size: { x: 200, y: 150 },
-        hasImage: false
-    };
+    let imagesData = [];
+    
+    // Control pane properties
+    let controlPanePos = { x: 0, y: 0 };
+    let controlPaneSize = { x: 340, y: 500 }; // Make this dynamic
+    const controlPaneCornerRadius = 20;
+    const controlPaneInnerFactor = 0.82;
+    
+    // Cache for performance optimization
+    let canvasRect = null;
+    let lastRectUpdate = 0;
+    const RECT_UPDATE_INTERVAL = 100; // Update canvas rect every 100ms max
 
-    const gridLineColorVal = [0, 0, 0, 0.08];
+    // Interaction handling variables
+    let isDragging = false;
+    let isResizing = false;
+    let isDraggingControlPane = false;
+    let dragTarget = null; // 'shape', or image index
+    let resizeHandle = null; // 'shape', or image index
+    let dragStartX, dragStartY;
+    let initialShapeCenterX, initialShapeCenterY;
+    let initialImagePos, initialImageSize;
+    let initialControlPanePos;
+
+    const gridLineColorVal = [0, 0, 0, 0.15]; // Make grid more visible
     const pageBackgroundColorVal = [221/255, 225/255, 231/255, 1.0];
 
     const ui = {
@@ -248,7 +347,9 @@ if (!gl) {
         glassAlpha: { slider: document.getElementById('glassAlphaSlider'), valueDisplay: document.getElementById('glassAlphaValue') },
         frostiness: { slider: document.getElementById('frostinessSlider'), valueDisplay: document.getElementById('frostinessValue') },
         gridToggle: document.getElementById('gridToggle'),
-        imageUpload: document.getElementById('imageUpload')
+        imageUpload: document.getElementById('imageUpload'),
+        controlsPane: document.getElementById('controls-pane'),
+        controlsTitle: document.getElementById('controls-title')
     };
 
     function updateControlsVisibility() {
@@ -310,17 +411,13 @@ if (!gl) {
 
     function handleImageUpload(event) {
         const file = event.target.files[0];
-        if (!file) return;
+        if (!file || imagesData.length >= 8) return; // Limit to 8 images
 
         const img = new Image();
         img.onload = function() {
             // Create texture
-            if (imageData.texture) {
-                gl.deleteTexture(imageData.texture);
-            }
-            
-            imageData.texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, imageData.texture);
+            const texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, texture);
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -329,23 +426,20 @@ if (!gl) {
 
             // Set image size maintaining aspect ratio
             const aspectRatio = img.width / img.height;
-            imageData.size.x = 300;
-            imageData.size.y = 300 / aspectRatio;
-            imageData.hasImage = true;
+            const imageData = {
+                texture: texture,
+                position: { x: 100 + imagesData.length * 50, y: 100 + imagesData.length * 50 },
+                size: { x: 300, y: 300 / aspectRatio }
+            };
             
+            imagesData.push(imageData);
             requestAnimationFrame(render);
         };
         img.src = URL.createObjectURL(file);
+        
+        // Clear the input so the same file can be uploaded again
+        event.target.value = '';
     }
-
-    // Interaction handling
-    let isDragging = false;
-    let isResizing = false;
-    let dragTarget = null; // 'shape', 'image'
-    let resizeHandle = null; // 'shape', 'image'
-    let dragStartX, dragStartY;
-    let initialShapeCenterX, initialShapeCenterY;
-    let initialImagePos, initialImageSize;
 
     function getMousePos(e) {
         const rect = canvas.getBoundingClientRect();
@@ -369,13 +463,18 @@ if (!gl) {
     }
 
     function isPointInImage(x, y) {
-        if (!imageData.hasImage) return false;
-        return x >= imageData.position.x && x <= imageData.position.x + imageData.size.x &&
-               y >= imageData.position.y && y <= imageData.position.y + imageData.size.y;
+        for (let i = imagesData.length - 1; i >= 0; i--) { // Check from top to bottom
+            const img = imagesData[i];
+            if (x >= img.position.x && x <= img.position.x + img.size.x &&
+                y >= img.position.y && y <= img.position.y + img.size.y) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     function getResizeHandle(x, y) {
-        const edgeThreshold = 10;
+        const edgeThreshold = 15;
         
         // Check shape resize handles
         if (isPointInShape(x, y)) {
@@ -394,20 +493,96 @@ if (!gl) {
             }
         }
         
-        // Check image resize handles
-        if (imageData.hasImage) {
-            const imgRight = imageData.position.x + imageData.size.x;
-            const imgTop = imageData.position.y + imageData.size.y;
+        // Check image resize handles (bottom-right corner)
+        for (let i = imagesData.length - 1; i >= 0; i--) {
+            const img = imagesData[i];
+            const imgRight = img.position.x + img.size.x;
+            const imgTop = img.position.y + img.size.y;
             
             if (Math.abs(x - imgRight) < edgeThreshold && Math.abs(y - imgTop) < edgeThreshold) {
-                return 'image';
+                return i;
             }
         }
         
         return null;
     }
 
+    function updateControlPanePosition() {
+        const now = Date.now();
+        if (!canvasRect || now - lastRectUpdate > RECT_UPDATE_INTERVAL) {
+            canvasRect = canvas.getBoundingClientRect();
+            lastRectUpdate = now;
+        }
+        
+        const htmlPaneRect = ui.controlsPane.getBoundingClientRect();
+        
+        // Update control pane size to match actual HTML pane dimensions
+        controlPaneSize.x = htmlPaneRect.width;
+        controlPaneSize.y = htmlPaneRect.height;
+        
+        // Convert HTML pane position to canvas coordinates
+        controlPanePos.x = (htmlPaneRect.left - canvasRect.left) + controlPaneSize.x * 0.5;
+        controlPanePos.y = canvas.height - (htmlPaneRect.top - canvasRect.top) - controlPaneSize.y * 0.5;
+    }
+
+    function syncHTMLPanePosition() {
+        // Use cached canvas rect if available and recent
+        const now = Date.now();
+        if (!canvasRect || now - lastRectUpdate > RECT_UPDATE_INTERVAL) {
+            canvasRect = canvas.getBoundingClientRect();
+            lastRectUpdate = now;
+        }
+        
+        const htmlLeft = controlPanePos.x - controlPaneSize.x * 0.5;
+        const htmlTop = canvas.height - controlPanePos.y - controlPaneSize.y * 0.5;
+        
+        // Use transform instead of changing left/top for better performance
+        ui.controlsPane.style.transform = `translate(${htmlLeft}px, ${htmlTop}px)`;
+        ui.controlsPane.style.left = '0px';
+        ui.controlsPane.style.top = '0px';
+        ui.controlsPane.style.right = 'auto';
+    }
+
+    // Control pane drag functionality
+    ui.controlsTitle.addEventListener('mousedown', (e) => {
+        isDraggingControlPane = true;
+        ui.controlsTitle.style.cursor = 'grabbing';
+        dragStartX = e.clientX;
+        dragStartY = e.clientY;
+        initialControlPanePos = { ...controlPanePos };
+        
+        // Cache canvas rect at start of drag for consistent calculations
+        canvasRect = canvas.getBoundingClientRect();
+        lastRectUpdate = Date.now();
+        
+        e.preventDefault();
+        e.stopPropagation();
+    });
+
+    // Document-level mouse move handler for control pane dragging
+    document.addEventListener('mousemove', (e) => {
+        if (isDraggingControlPane) {
+            const dx = e.clientX - dragStartX;
+            const dy = e.clientY - dragStartY;
+            
+            controlPanePos.x = initialControlPanePos.x + dx;
+            controlPanePos.y = initialControlPanePos.y - dy; // Flip Y
+            
+            // Only sync HTML position, don't re-render canvas every frame
+            syncHTMLPanePosition();
+            
+            // Throttle canvas rendering during drag
+            if (Date.now() - lastRectUpdate > 16) { // ~60fps max
+                requestAnimationFrame(render);
+            }
+            return;
+        }
+    });
+
+    // Canvas-specific mouse move handler for shapes and images
     canvas.addEventListener('mousemove', (e) => {
+        if (isDraggingControlPane) return;
+        
         if (isDragging) {
             const mousePos = getMousePos(e);
             const dx = mousePos.x - dragStartX;
@@ -416,9 +591,9 @@ if (!gl) {
             if (dragTarget === 'shape') {
                 shapeCenterPos.x = initialShapeCenterX + dx;
                 shapeCenterPos.y = initialShapeCenterY + dy;
-            } else if (dragTarget === 'image') {
-                imageData.position.x = initialImagePos.x + dx;
-                imageData.position.y = initialImagePos.y + dy;
+            } else if (typeof dragTarget === 'number') {
+                imagesData[dragTarget].position.x = initialImagePos.x + dx;
+                imagesData[dragTarget].position.y = initialImagePos.y + dy;
             }
             requestAnimationFrame(render);
         } else if (isResizing) {
@@ -428,21 +603,22 @@ if (!gl) {
             
             if (resizeHandle === 'shape') {
                 if (params.shapeType === 0) {
-                    const newRadius = Math.max(20, params.diskPhysicalRadius + dx * 0.5);
+                    // Reduce sensitivity by using smaller multiplier
+                    const newRadius = Math.max(20, params.diskPhysicalRadius + dx * 0.2);
                     params.diskPhysicalRadius = newRadius;
                     ui.diskRadius.slider.value = newRadius;
-                    ui.diskRadius.valueDisplay.textContent = newRadius;
+                    ui.diskRadius.valueDisplay.textContent = Math.round(newRadius);
                 } else {
                     params.rectWidth = Math.max(50, initialImageSize.x + dx);
                     params.rectHeight = Math.max(50, initialImageSize.y + dy);
                     ui.rectWidth.slider.value = params.rectWidth;
-                    ui.rectWidth.valueDisplay.textContent = params.rectWidth;
+                    ui.rectWidth.valueDisplay.textContent = Math.round(params.rectWidth);
                     ui.rectHeight.slider.value = params.rectHeight;
-                    ui.rectHeight.valueDisplay.textContent = params.rectHeight;
+                    ui.rectHeight.valueDisplay.textContent = Math.round(params.rectHeight);
                 }
-            } else if (resizeHandle === 'image') {
-                imageData.size.x = Math.max(50, initialImageSize.x + dx);
-                imageData.size.y = Math.max(50, initialImageSize.y + dy);
+            } else if (typeof resizeHandle === 'number') {
+                imagesData[resizeHandle].size.x = Math.max(50, initialImageSize.x + dx);
+                imagesData[resizeHandle].size.y = Math.max(50, initialImageSize.y + dy);
             }
             requestAnimationFrame(render);
         } else {
@@ -450,9 +626,9 @@ if (!gl) {
             const mousePos = getMousePos(e);
             const resizeHandleType = getResizeHandle(mousePos.x, mousePos.y);
             
-            if (resizeHandleType) {
+            if (resizeHandleType !== null) {
                 canvas.style.cursor = 'nw-resize';
-            } else if (isPointInShape(mousePos.x, mousePos.y) || isPointInImage(mousePos.x, mousePos.y)) {
+            } else if (isPointInShape(mousePos.x, mousePos.y) || isPointInImage(mousePos.x, mousePos.y) !== -1) {
                 canvas.style.cursor = 'grab';
             } else {
                 canvas.style.cursor = 'default';
@@ -461,13 +637,16 @@ if (!gl) {
     });
 
     canvas.addEventListener('mousedown', (e) => {
+        // Only handle canvas interactions if not dragging control pane
+        if (isDraggingControlPane) return;
+        
         const mousePos = getMousePos(e);
         const resizeHandleType = getResizeHandle(mousePos.x, mousePos.y);
         
         dragStartX = mousePos.x;
         dragStartY = mousePos.y;
         
-        if (resizeHandleType) {
+        if (resizeHandleType !== null) {
             isResizing = true;
             resizeHandle = resizeHandleType;
             canvas.style.cursor = 'nw-resize';
@@ -475,7 +654,7 @@ if (!gl) {
             if (resizeHandleType === 'shape') {
                 initialImageSize = { x: params.rectWidth, y: params.rectHeight };
             } else {
-                initialImageSize = { ...imageData.size };
+                initialImageSize = { ...imagesData[resizeHandleType].size };
             }
         } else if (isPointInShape(mousePos.x, mousePos.y)) {
             isDragging = true;
@@ -483,17 +662,24 @@ if (!gl) {
             canvas.style.cursor = 'grabbing';
             initialShapeCenterX = shapeCenterPos.x;
             initialShapeCenterY = shapeCenterPos.y;
-        } else if (isPointInImage(mousePos.x, mousePos.y)) {
-            isDragging = true;
-            dragTarget = 'image';
-            canvas.style.cursor = 'grabbing';
-            initialImagePos = { ...imageData.position };
+        } else {
+            const imageIndex = isPointInImage(mousePos.x, mousePos.y);
+            if (imageIndex !== -1) {
+                isDragging = true;
+                dragTarget = imageIndex;
+                canvas.style.cursor = 'grabbing';
+                initialImagePos = { ...imagesData[imageIndex].position };
+            }
         }
         
         e.preventDefault();
     });
 
     document.addEventListener('mouseup', () => {
+        if (isDraggingControlPane) {
+            isDraggingControlPane = false;
+            ui.controlsTitle.style.cursor = 'grab';
+        }
         if (isDragging || isResizing) {
             isDragging = false;
             isResizing = false;
@@ -504,11 +690,19 @@ if (!gl) {
     });
     
     function resizeCanvas() {
-        canvas.width = canvas.clientWidth; canvas.height = canvas.clientHeight;
+        canvas.width = canvas.clientWidth; 
+        canvas.height = canvas.clientHeight;
         gl.viewport(0, 0, canvas.width, canvas.height);
-        if (!isDragging) { // Initialize center only if not mid-drag
-             shapeCenterPos.x = canvas.width / 2; shapeCenterPos.y = canvas.height / 2;
+        
+        // Invalidate cached rect on resize
+        canvasRect = null;
+        
+        if (!isDragging) {
+            shapeCenterPos.x = canvas.width / 2; 
+            shapeCenterPos.y = canvas.height / 2;
         }
+        
+        updateControlPanePosition();
         requestAnimationFrame(render);
     }
     window.addEventListener('resize', resizeCanvas);
@@ -534,14 +728,41 @@ if (!gl) {
         gl.uniform1i(loc.shapeType, params.shapeType);
         gl.uniform1f(loc.frostiness, params.frostiness);
         gl.uniform1i(loc.showGrid, params.showGrid);
-        gl.uniform1i(loc.hasImage, imageData.hasImage);
+        gl.uniform1i(loc.hasImage, imagesData.length > 0);
+        gl.uniform1i(loc.imageCount, imagesData.length);
+
+        // Control pane uniforms
+        gl.uniform2f(loc.controlPaneCenter, controlPanePos.x, controlPanePos.y);
+        gl.uniform2f(loc.controlPaneSize, controlPaneSize.x, controlPaneSize.y);
+        gl.uniform1f(loc.controlPaneCornerRadius, controlPaneCornerRadius);
         
-        if (imageData.hasImage && imageData.texture) {
-            gl.activeTexture(gl.TEXTURE0);
-            gl.bindTexture(gl.TEXTURE_2D, imageData.texture);
-            gl.uniform1i(loc.imageTexture, 0);
-            gl.uniform2f(loc.imagePosition, imageData.position.x, imageData.position.y);
-            gl.uniform2f(loc.imageSize, imageData.size.x, imageData.size.y);
+        const controlPaneRingThickness = Math.min(controlPaneSize.x, controlPaneSize.y) * 0.5 * (1.0 - controlPaneInnerFactor);
+        gl.uniform1f(loc.controlPaneDistortingRingThickness, controlPaneRingThickness);
+        
+        // Set up image textures and data
+        for (let i = 0; i < 8; i++) {
+            if (i < imagesData.length) {
+                gl.activeTexture(gl.TEXTURE0 + i);
+                gl.bindTexture(gl.TEXTURE_2D, imagesData[i].texture);
+                gl.uniform1i(loc.imageTextures[i], i);
+            }
+        }
+        
+        // Set image positions and sizes
+        if (imagesData.length > 0) {
+            const positions = [];
+            const sizes = [];
+            for (let i = 0; i < 8; i++) {
+                if (i < imagesData.length) {
+                    positions.push(imagesData[i].position.x, imagesData[i].position.y);
+                    sizes.push(imagesData[i].size.x, imagesData[i].size.y);
+                } else {
+                    positions.push(0, 0);
+                    sizes.push(0, 0);
+                }
+            }
+            gl.uniform2fv(loc.imagePositions, positions);
+            gl.uniform2fv(loc.imageSizes, sizes);
         }
 
         let currentDistortingRingThickness = 0;
@@ -561,4 +782,5 @@ if (!gl) {
 
     initializeControls();
     resizeCanvas();
+    updateControlPanePosition(); // Initialize control pane position
 }
