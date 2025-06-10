@@ -19,23 +19,21 @@ if (!gl) {
 
     const fsSource = `
         precision mediump float;
-        varying vec2 v_texCoord; // Normalized 0-1 coordinates for the canvas
+        varying vec2 v_texCoord;
 
-        uniform vec2 u_resolution;          // Canvas dimensions in pixels
-        uniform vec2 u_diskCenter;          // Disk center in pixel coordinates
-        uniform float u_diskRadius;         // Outer radius of the disk in pixels
-        uniform float u_innerRadius;        // Radius of the non-distorting inner part
-        uniform float u_refractionStrength; // Controls the amount of distortion
-        
-        uniform vec4 u_gridLineColor;       // Color of the grid lines
-        uniform float u_gridSpacing;        // Spacing of grid lines in pixels
-        uniform vec4 u_pageBackgroundColor; // The general page background color
-        uniform vec4 u_glassBaseColor;      // A subtle tint for the glass itself
+        uniform vec2 u_resolution;
+        uniform vec2 u_diskCenter;
+        uniform float u_diskRadius;
+        uniform float u_innerRadius;
+        uniform float u_refractionStrength;
+        uniform vec4 u_gridLineColor;
+        uniform float u_gridSpacing;
+        uniform vec4 u_pageBackgroundColor;
+        uniform vec4 u_glassBaseColor;
 
-        // Function to draw a procedural grid
         vec4 getGridColor(vec2 coord, float spacing, vec4 lineColor, vec4 bgColor) {
             vec2 gridPos = mod(coord, spacing);
-            float lineThickness = 1.0; 
+            float lineThickness = 1.0;
             if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
                 return lineColor;
             }
@@ -44,54 +42,39 @@ if (!gl) {
 
         void main() {
             vec2 currentPixelCoord = v_texCoord * u_resolution;
-            // Flip Y for typical screen coordinates (optional, depends on setup)
-            // currentPixelCoord.y = u_resolution.y - currentPixelCoord.y;
-
-
             vec2 vectorFromDiskCenter = currentPixelCoord - u_diskCenter;
             float distanceToCenter = length(vectorFromDiskCenter);
 
             vec4 outputColor;
 
             if (distanceToCenter > u_diskRadius) {
-                // Outside the disk: draw normal grid
                 outputColor = getGridColor(currentPixelCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
             } else {
-                // Inside the disk
-                vec2 sampleCoord = currentPixelCoord; // Coordinate to sample the background grid from
+                vec2 sampleCoord = currentPixelCoord;
 
                 if (distanceToCenter > u_innerRadius) {
-                    // This is the distorting edge part of the disk
-                    float ringT = (distanceToCenter - u_innerRadius) / (u_diskRadius - u_innerRadius); // Normalized 0 to 1 within the ring
+                    float ringT = (distanceToCenter - u_innerRadius) / (u_diskRadius - u_innerRadius); // 0 at inner, 1 at outer
+
+                    // Distortion: max at outer edge (ringT=1), 0 at inner edge (ringT=0).
+                    // pow(ringT, N) gives this profile. Let's use N=2.0 for quadratic.
+                    float distortionExponent = 2.0; // Could be a uniform for more control
+                    float distortionMagnitude = u_refractionStrength * pow(ringT, distortionExponent);
                     
-                    // Distortion magnitude: sine curve for a bulge, max in middle of ring
-                    float distortionMagnitude = sin(ringT * 3.1415926535) * u_refractionStrength;
-                    
-                    // To simulate a convex lens (magnifying), background appears shifted away from lens center.
-                    // So, we sample the background from a point effectively "more inward" relative to the lens geometry.
-                    // The vector vectorFromDiskCenter points from disk center to current pixel.
-                    // We shift sampling point opposite to this direction.
-                    sampleCoord = currentPixelCoord - normalize(vectorFromDiskCenter) * distortionMagnitude; // Minor reformatting/spacing
+                    sampleCoord = currentPixelCoord - normalize(vectorFromDiskCenter) * distortionMagnitude;
                 }
-                // else: central flat part, sampleCoord remains currentPixelCoord (no distortion)
 
                 vec4 refractedGridColor = getGridColor(sampleCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
-                
-                // Apply a base glass color (slightly transparent)
                 outputColor = mix(refractedGridColor, u_glassBaseColor, u_glassBaseColor.a);
 
-                // Add subtle highlight/shadow for fillet/edge form
-                if (distanceToCenter > u_innerRadius) {
-                    float edgeFactor = smoothstep(u_diskRadius - 5.0, u_diskRadius, distanceToCenter); // 0 to 1 at the very edge
-                    outputColor.rgb += vec3(0.1,0.1,0.12) * edgeFactor * (1.0 - u_glassBaseColor.a); // Highlight (stronger if glass is clearer)
-
-                    float innerRimFactor = 1.0 - smoothstep(u_innerRadius, u_innerRadius + 5.0, distanceToCenter); // 0 to 1 at inner edge, fading out
-                    outputColor.rgb *= (1.0 - innerRimFactor * 0.03); // Slight darkening just outside inner rim
+                // Outer edge highlight (no inner rim shadow for seamlessness)
+                if (distanceToCenter > u_innerRadius) { // This condition is fine, applies only in the ring
+                    float edgeFactor = smoothstep(u_diskRadius - 5.0, u_diskRadius, distanceToCenter);
+                    outputColor.rgb += vec3(0.1,0.1,0.12) * edgeFactor * (1.0 - u_glassBaseColor.a);
                 }
-                 // A very subtle overall highlight based on angle (fake fresnel/specular)
-                float dotProd = dot(normalize(vectorFromDiskCenter), normalize(vec2(0.7,0.7))); // Light from top-leftish
+
+                float dotProd = dot(normalize(vectorFromDiskCenter), normalize(vec2(0.7,0.7)));
                 float highlight = pow(max(0.0, dotProd), 20.0) * 0.1;
-                if (distanceToCenter < u_diskRadius * 0.95) { // Avoid highlight at very edge if edgeFactor is already strong
+                if (distanceToCenter < u_diskRadius * 0.95) {
                    outputColor.rgb += highlight * (1.0 - u_glassBaseColor.a);
                 }
             }
