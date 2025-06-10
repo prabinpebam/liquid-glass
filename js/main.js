@@ -25,6 +25,11 @@ if (!gl) {
         uniform vec4 u_pageBackgroundColor;
         uniform vec4 u_glassBaseColor;
         uniform float u_frostiness;
+        uniform bool u_showGrid;
+        uniform bool u_hasImage;
+        uniform sampler2D u_imageTexture;
+        uniform vec2 u_imagePosition;
+        uniform vec2 u_imageSize;
 
         // Shape specific uniforms
         uniform int u_shapeType;
@@ -38,74 +43,30 @@ if (!gl) {
             return min(max(q.x,q.y),0.0) + length(max(q,0.0)) - r;
         }
 
-        // Hash function for pseudo-random numbers
-        float hash(vec2 p) {
-            return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-        }
-
         vec4 getBackgroundPatternColor(vec2 coord, float spacing, vec4 gridLineCol, vec4 pageBgCol) {
             vec4 color = pageBgCol;
 
-            // Add text-like rectangles
-            vec2 textPos1 = u_resolution * vec2(0.15, 0.8);
-            for (int i = 0; i < 8; i++) {
-                vec2 rectPos = textPos1 + vec2(float(i) * spacing * 0.6, 0.0);
-                vec2 rectSize = vec2(spacing * 0.4, spacing * 0.15);
-                if (abs(coord.x - rectPos.x) < rectSize.x && abs(coord.y - rectPos.y) < rectSize.y) {
-                    color = mix(color, vec4(0.2, 0.2, 0.2, 1.0), 0.8);
+            // Draw uploaded image if available
+            if (u_hasImage) {
+                vec2 imageMin = u_imagePosition;
+                vec2 imageMax = u_imagePosition + u_imageSize;
+                
+                if (coord.x >= imageMin.x && coord.x <= imageMax.x && 
+                    coord.y >= imageMin.y && coord.y <= imageMax.y) {
+                    vec2 uv = (coord - imageMin) / u_imageSize;
+                    uv.y = 1.0 - uv.y; // Flip Y for texture sampling
+                    vec4 imageColor = texture2D(u_imageTexture, uv);
+                    color = mix(color, imageColor, imageColor.a);
                 }
             }
 
-            // Add more text lines
-            for (int line = 0; line < 5; line++) {
-                vec2 lineStart = u_resolution * vec2(0.1, 0.7 - float(line) * 0.08);
-                for (int i = 0; i < 12; i++) {
-                    vec2 rectPos = lineStart + vec2(float(i) * spacing * 0.5, 0.0);
-                    vec2 rectSize = vec2(spacing * 0.3, spacing * 0.12);
-                    if (abs(coord.x - rectPos.x) < rectSize.x && abs(coord.y - rectPos.y) < rectSize.y) {
-                        color = mix(color, vec4(0.3, 0.3, 0.3, 1.0), 0.7);
-                    }
+            // Overlay grid lines if enabled
+            if (u_showGrid) {
+                vec2 gridPos = mod(coord, spacing);
+                float lineThickness = 1.0;
+                if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
+                    color = mix(color, gridLineCol, gridLineCol.a * 0.8);
                 }
-            }
-
-            // Add colorful shapes (simulating icons/emojis)
-            vec2 circle1_center = u_resolution * vec2(0.25, 0.3);
-            float circle1_radius = spacing * 1.2;
-            if (length(coord - circle1_center) < circle1_radius) {
-                color = mix(color, vec4(1.0, 0.6, 0.2, 1.0), 0.8); // Orange circle
-            }
-
-            vec2 circle2_center = u_resolution * vec2(0.7, 0.6);
-            float circle2_radius = spacing * 0.8;
-            if (length(coord - circle2_center) < circle2_radius) {
-                color = mix(color, vec4(0.2, 0.8, 0.4, 1.0), 0.8); // Green circle
-            }
-
-            vec2 circle3_center = u_resolution * vec2(0.8, 0.2);
-            float circle3_radius = spacing * 1.0;
-            if (length(coord - circle3_center) < circle3_radius) {
-                color = mix(color, vec4(0.3, 0.5, 1.0, 1.0), 0.8); // Blue circle
-            }
-
-            // Add diamond shapes
-            vec2 diamond1 = u_resolution * vec2(0.5, 0.25);
-            vec2 dp = coord - diamond1;
-            if (abs(dp.x) + abs(dp.y) < spacing * 0.7) {
-                color = mix(color, vec4(0.9, 0.3, 0.7, 1.0), 0.7); // Pink diamond
-            }
-
-            // Add triangular shapes
-            vec2 tri1 = u_resolution * vec2(0.4, 0.7);
-            vec2 tp = coord - tri1;
-            if (tp.y > 0.0 && tp.y < spacing * 0.8 && abs(tp.x) < (spacing * 0.8 - tp.y)) {
-                color = mix(color, vec4(0.8, 0.8, 0.2, 1.0), 0.6); // Yellow triangle
-            }
-
-            // Overlay grid lines on top of everything
-            vec2 gridPos = mod(coord, spacing);
-            float lineThickness = 1.0;
-            if (gridPos.x < lineThickness || gridPos.y < lineThickness) {
-                color = mix(color, gridLineCol, gridLineCol.a * 0.8);
             }
 
             return color;
@@ -169,11 +130,9 @@ if (!gl) {
 
                 vec4 refractedBgColor;
                 if (u_frostiness > 0.1) {
-                    // Multi-sample blur for frosted glass effect
                     vec4 sumColor = vec4(0.0);
                     float sampleCount = 0.0;
                     
-                    // Use a larger sampling pattern for better blur
                     for (int x = -2; x <= 2; x++) {
                         for (int y = -2; y <= 2; y++) {
                             vec2 offset = vec2(float(x), float(y)) * u_frostiness * 0.5;
@@ -189,7 +148,6 @@ if (!gl) {
 
                 outputColor = mix(refractedBgColor, u_glassBaseColor, u_glassBaseColor.a);
 
-                // Minimal edge highlight only (removed all other reflections)
                 if (is_in_distorting_ring) {
                     float edgeGlow = smoothstep(0.85, 1.0, ringT) * 0.15;
                     outputColor.rgb += vec3(edgeGlow);
@@ -239,7 +197,12 @@ if (!gl) {
         rectSize: gl.getUniformLocation(shaderProgram, "u_rectSize"),
         rectCornerRadius: gl.getUniformLocation(shaderProgram, "u_rectCornerRadius"),
         distortingRingThickness: gl.getUniformLocation(shaderProgram, "u_distortingRingThickness"),
-        frostiness: gl.getUniformLocation(shaderProgram, "u_frostiness")
+        frostiness: gl.getUniformLocation(shaderProgram, "u_frostiness"),
+        showGrid: gl.getUniformLocation(shaderProgram, "u_showGrid"),
+        hasImage: gl.getUniformLocation(shaderProgram, "u_hasImage"),
+        imageTexture: gl.getUniformLocation(shaderProgram, "u_imageTexture"),
+        imagePosition: gl.getUniformLocation(shaderProgram, "u_imagePosition"),
+        imageSize: gl.getUniformLocation(shaderProgram, "u_imageSize")
     };
 
     const positionBuffer = gl.createBuffer();
@@ -256,10 +219,18 @@ if (!gl) {
         refractionStrength: 25.0,
         gridSpacing: 25.0,
         glassBaseColor: [250/255, 250/255, 255/255, 0.10],
-        frostiness: 0.0
+        frostiness: 0.0,
+        showGrid: true
     };
     
     let shapeCenterPos = { x: 0, y: 0 };
+    let imageData = {
+        texture: null,
+        position: { x: 100, y: 100 },
+        size: { x: 200, y: 150 },
+        hasImage: false
+    };
+
     const gridLineColorVal = [0, 0, 0, 0.08];
     const pageBackgroundColorVal = [221/255, 225/255, 231/255, 1.0];
 
@@ -275,7 +246,9 @@ if (!gl) {
         refractionStrength: { slider: document.getElementById('refractionStrengthSlider'), valueDisplay: document.getElementById('refractionStrengthValue') },
         gridSpacing: { slider: document.getElementById('gridSpacingSlider'), valueDisplay: document.getElementById('gridSpacingValue') },
         glassAlpha: { slider: document.getElementById('glassAlphaSlider'), valueDisplay: document.getElementById('glassAlphaValue') },
-        frostiness: { slider: document.getElementById('frostinessSlider'), valueDisplay: document.getElementById('frostinessValue') }
+        frostiness: { slider: document.getElementById('frostinessSlider'), valueDisplay: document.getElementById('frostinessValue') },
+        gridToggle: document.getElementById('gridToggle'),
+        imageUpload: document.getElementById('imageUpload')
     };
 
     function updateControlsVisibility() {
@@ -323,27 +296,211 @@ if (!gl) {
             ui.glassAlpha.valueDisplay.textContent = params.glassBaseColor[3].toFixed(2);
             requestAnimationFrame(render);
         });
+
+        // Grid toggle
+        ui.gridToggle.checked = params.showGrid;
+        ui.gridToggle.addEventListener('change', (e) => {
+            params.showGrid = e.target.checked;
+            requestAnimationFrame(render);
+        });
+
+        // Image upload
+        ui.imageUpload.addEventListener('change', handleImageUpload);
     }
 
+    function handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const img = new Image();
+        img.onload = function() {
+            // Create texture
+            if (imageData.texture) {
+                gl.deleteTexture(imageData.texture);
+            }
+            
+            imageData.texture = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D, imageData.texture);
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+            // Set image size maintaining aspect ratio
+            const aspectRatio = img.width / img.height;
+            imageData.size.x = 300;
+            imageData.size.y = 300 / aspectRatio;
+            imageData.hasImage = true;
+            
+            requestAnimationFrame(render);
+        };
+        img.src = URL.createObjectURL(file);
+    }
+
+    // Interaction handling
     let isDragging = false;
+    let isResizing = false;
+    let dragTarget = null; // 'shape', 'image'
+    let resizeHandle = null; // 'shape', 'image'
     let dragStartX, dragStartY;
     let initialShapeCenterX, initialShapeCenterY;
+    let initialImagePos, initialImageSize;
+
+    function getMousePos(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: e.clientX - rect.left,
+            y: canvas.height - (e.clientY - rect.top) // Flip Y coordinate
+        };
+    }
+
+    function isPointInShape(x, y) {
+        const dx = x - shapeCenterPos.x;
+        const dy = y - shapeCenterPos.y;
+        
+        if (params.shapeType === 0) { // Disk
+            return Math.sqrt(dx * dx + dy * dy) <= params.diskPhysicalRadius;
+        } else { // Rectangle
+            const halfW = params.rectWidth * 0.5;
+            const halfH = params.rectHeight * 0.5;
+            return Math.abs(dx) <= halfW && Math.abs(dy) <= halfH;
+        }
+    }
+
+    function isPointInImage(x, y) {
+        if (!imageData.hasImage) return false;
+        return x >= imageData.position.x && x <= imageData.position.x + imageData.size.x &&
+               y >= imageData.position.y && y <= imageData.position.y + imageData.size.y;
+    }
+
+    function getResizeHandle(x, y) {
+        const edgeThreshold = 10;
+        
+        // Check shape resize handles
+        if (isPointInShape(x, y)) {
+            const dx = x - shapeCenterPos.x;
+            const dy = y - shapeCenterPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            if (params.shapeType === 0 && Math.abs(dist - params.diskPhysicalRadius) < edgeThreshold) {
+                return 'shape';
+            } else if (params.shapeType === 1) {
+                const halfW = params.rectWidth * 0.5;
+                const halfH = params.rectHeight * 0.5;
+                if (Math.abs(Math.abs(dx) - halfW) < edgeThreshold || Math.abs(Math.abs(dy) - halfH) < edgeThreshold) {
+                    return 'shape';
+                }
+            }
+        }
+        
+        // Check image resize handles
+        if (imageData.hasImage) {
+            const imgRight = imageData.position.x + imageData.size.x;
+            const imgTop = imageData.position.y + imageData.size.y;
+            
+            if (Math.abs(x - imgRight) < edgeThreshold && Math.abs(y - imgTop) < edgeThreshold) {
+                return 'image';
+            }
+        }
+        
+        return null;
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+        if (isDragging) {
+            const mousePos = getMousePos(e);
+            const dx = mousePos.x - dragStartX;
+            const dy = mousePos.y - dragStartY;
+            
+            if (dragTarget === 'shape') {
+                shapeCenterPos.x = initialShapeCenterX + dx;
+                shapeCenterPos.y = initialShapeCenterY + dy;
+            } else if (dragTarget === 'image') {
+                imageData.position.x = initialImagePos.x + dx;
+                imageData.position.y = initialImagePos.y + dy;
+            }
+            requestAnimationFrame(render);
+        } else if (isResizing) {
+            const mousePos = getMousePos(e);
+            const dx = mousePos.x - dragStartX;
+            const dy = mousePos.y - dragStartY;
+            
+            if (resizeHandle === 'shape') {
+                if (params.shapeType === 0) {
+                    const newRadius = Math.max(20, params.diskPhysicalRadius + dx * 0.5);
+                    params.diskPhysicalRadius = newRadius;
+                    ui.diskRadius.slider.value = newRadius;
+                    ui.diskRadius.valueDisplay.textContent = newRadius;
+                } else {
+                    params.rectWidth = Math.max(50, initialImageSize.x + dx);
+                    params.rectHeight = Math.max(50, initialImageSize.y + dy);
+                    ui.rectWidth.slider.value = params.rectWidth;
+                    ui.rectWidth.valueDisplay.textContent = params.rectWidth;
+                    ui.rectHeight.slider.value = params.rectHeight;
+                    ui.rectHeight.valueDisplay.textContent = params.rectHeight;
+                }
+            } else if (resizeHandle === 'image') {
+                imageData.size.x = Math.max(50, initialImageSize.x + dx);
+                imageData.size.y = Math.max(50, initialImageSize.y + dy);
+            }
+            requestAnimationFrame(render);
+        } else {
+            // Update cursor based on hover
+            const mousePos = getMousePos(e);
+            const resizeHandleType = getResizeHandle(mousePos.x, mousePos.y);
+            
+            if (resizeHandleType) {
+                canvas.style.cursor = 'nw-resize';
+            } else if (isPointInShape(mousePos.x, mousePos.y) || isPointInImage(mousePos.x, mousePos.y)) {
+                canvas.style.cursor = 'grab';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+        }
+    });
 
     canvas.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        canvas.style.cursor = 'grabbing';
-        dragStartX = e.clientX; dragStartY = e.clientY;
-        initialShapeCenterX = shapeCenterPos.x; initialShapeCenterY = shapeCenterPos.y;
+        const mousePos = getMousePos(e);
+        const resizeHandleType = getResizeHandle(mousePos.x, mousePos.y);
+        
+        dragStartX = mousePos.x;
+        dragStartY = mousePos.y;
+        
+        if (resizeHandleType) {
+            isResizing = true;
+            resizeHandle = resizeHandleType;
+            canvas.style.cursor = 'nw-resize';
+            
+            if (resizeHandleType === 'shape') {
+                initialImageSize = { x: params.rectWidth, y: params.rectHeight };
+            } else {
+                initialImageSize = { ...imageData.size };
+            }
+        } else if (isPointInShape(mousePos.x, mousePos.y)) {
+            isDragging = true;
+            dragTarget = 'shape';
+            canvas.style.cursor = 'grabbing';
+            initialShapeCenterX = shapeCenterPos.x;
+            initialShapeCenterY = shapeCenterPos.y;
+        } else if (isPointInImage(mousePos.x, mousePos.y)) {
+            isDragging = true;
+            dragTarget = 'image';
+            canvas.style.cursor = 'grabbing';
+            initialImagePos = { ...imageData.position };
+        }
+        
         e.preventDefault();
     });
-    document.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        shapeCenterPos.x = initialShapeCenterX + (e.clientX - dragStartX);
-        shapeCenterPos.y = initialShapeCenterY - (e.clientY - dragStartY); // Y flip
-        requestAnimationFrame(render);
-    });
+
     document.addEventListener('mouseup', () => {
-        if (isDragging) { isDragging = false; canvas.style.cursor = 'grab';}
+        if (isDragging || isResizing) {
+            isDragging = false;
+            isResizing = false;
+            dragTarget = null;
+            resizeHandle = null;
+            canvas.style.cursor = 'default';
+        }
     });
     
     function resizeCanvas() {
@@ -376,19 +533,28 @@ if (!gl) {
         
         gl.uniform1i(loc.shapeType, params.shapeType);
         gl.uniform1f(loc.frostiness, params.frostiness);
+        gl.uniform1i(loc.showGrid, params.showGrid);
+        gl.uniform1i(loc.hasImage, imageData.hasImage);
+        
+        if (imageData.hasImage && imageData.texture) {
+            gl.activeTexture(gl.TEXTURE0);
+            gl.bindTexture(gl.TEXTURE_2D, imageData.texture);
+            gl.uniform1i(loc.imageTexture, 0);
+            gl.uniform2f(loc.imagePosition, imageData.position.x, imageData.position.y);
+            gl.uniform2f(loc.imageSize, imageData.size.x, imageData.size.y);
+        }
 
         let currentDistortingRingThickness = 0;
-        if (params.shapeType == 0) { // Disk
+        if (params.shapeType == 0) {
             gl.uniform1f(loc.diskRadius, params.diskPhysicalRadius);
             currentDistortingRingThickness = params.diskPhysicalRadius * (1.0 - params.innerRadiusFactor);
-        } else { // Rectangle
+        } else {
             gl.uniform2f(loc.rectSize, params.rectWidth, params.rectHeight);
             gl.uniform1f(loc.rectCornerRadius, params.rectCornerRadius);
-            // Base thickness calculation on the smaller dimension of the rectangle for consistency
             let characteristicRectDim = Math.min(params.rectWidth, params.rectHeight) * 0.5;
             currentDistortingRingThickness = characteristicRectDim * (1.0 - params.innerRadiusFactor);
         }
-        gl.uniform1f(loc.distortingRingThickness, Math.max(0.0, currentDistortingRingThickness)); // Ensure non-negative
+        gl.uniform1f(loc.distortingRingThickness, Math.max(0.0, currentDistortingRingThickness));
 
         gl.drawArrays(gl.TRIANGLES, 0, 6);
     }
