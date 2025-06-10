@@ -1,27 +1,24 @@
-body {
+* {
     margin: 0;
-    height: 100vh;
-    background-color: #dde1e7; /* A neutral background, will be page bg color in shader */
-    overflow: hidden;
-    display: flex; /* Ensure canvas can be centered if not full screen */
-    justify-content: center;
-    align-items: center;
-    font-family: sans-serif;
+    padding: 0;
+    box-sizing: border-box;
 }
 
-.scene {
-    position: relative;
-    width: 100%;
+body, html {
     height: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #dde1e7;
+    overflow: hidden;
 }
 
 #webglCanvas {
-    width: 100%;
-    height: 100%;
-    cursor: grab;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    cursor: default;
 }
 
 #controls-pane {
@@ -93,4 +90,27 @@ body {
     width: 100%;
     padding: 5px;
     box-sizing: border-box;
+}
+
+/* Drop zone styling */
+.drop-zone {
+    position: relative;
+}
+
+.drop-zone.drag-over::after {
+    content: "Drop image here";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 123, 255, 0.1);
+    border: 3px dashed rgba(0, 123, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: rgba(0, 123, 255, 0.8);
+    z-index: 1000;
+    pointer-events: none;
 }

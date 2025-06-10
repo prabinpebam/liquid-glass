@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <div class="scene">
+    <div class="scene drop-zone">
         <canvas id="webglCanvas"></canvas>
     </div>
 
@@ -50,7 +50,7 @@
         <hr>
 
         <div class="control-group">
-            <label for="innerRadiusFactorSlider">Distortion Ring Thickness: <span id="innerRadiusFactorValue"></span>px</label>
+            <label for="innerRadiusFactorSlider">Edge distortion thickness: <span id="innerRadiusFactorValue"></span>px</label>
             <input type="range" id="innerRadiusFactorSlider" min="5" max="100" step="1" value="30">
         </div>
         <div class="control-group">
@@ -67,20 +67,19 @@
         </div>
         <div class="control-group">
             <label for="frostinessSlider">Frostiness: <span id="frostinessValue"></span></label>
-            <input type="range" id="frostinessSlider" min="0" max="15" step="0.5" value="0.0">
+            <input type="range" id="frostinessSlider" min="0" max="15" step="0.5" value="1.0">
         </div>
         
         <hr>
 
         <div class="control-group">
-            <label for="gridToggle">Show Grid:</label>
-            <input type="checkbox" id="gridToggle" checked>
+            <label>
+                <input type="checkbox" id="gridToggle" checked> Show Grid
+            </label>
         </div>
         
-        <div class="control-group">
-            <label for="imageUpload">Upload Image:</label>
-            <input type="file" id="imageUpload" accept="image/*">
-        </div>
+        <!-- Hidden file input for image upload -->
+        <input type="file" id="imageUpload" accept="image/*" style="display: none;">
     </div>
 
     <script src="js/main.js" defer></script>
