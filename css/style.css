@@ -7,7 +7,7 @@
 body, html {
     height: 100%;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background: #dde1e7;
+    /* background: #dde1e7; */ /* Will be controlled by WebGL */
     overflow: hidden;
 }
 
@@ -19,15 +19,16 @@ body, html {
     height: 100vh;
     display: block;
     cursor: default;
+    background-color: #333333; /* Default background if WebGL fails or before it loads */
 }
 
 #controls-pane {
     position: absolute;
-    top: 50%; /* Initial position, will be adjusted by JS */
-    right: 20px; /* Initial position */
-    transform: translateY(-50%); /* Vertically center based on its own height */
-    width: 320px; /* Fixed width */
+    top: 50px;
+    right: 50px;
+    width: 360px; /* Fixed width */
     max-height: 90vh; /* Max height to prevent overflow and allow scrolling */
+    min-height: 210px;
     padding: 15px; /* Reduced padding */
     box-sizing: border-box;
     border-radius: 18px; /* Consistent with WebGL glass */
@@ -74,11 +75,10 @@ body, html {
     margin-top: 0;
     margin-bottom: 10px; /* Reduced margin */
     padding-bottom: 8px; /* Reduced padding */
-    text-align: center;
-    cursor: grab; /* For dragging */
+    text-align: left;
     display: flex;
     align-items: center;
-    justify-content: center; /* Center title text */
+    justify-content: flex-start; 
 }
 
 #controls-title:active {
@@ -93,10 +93,13 @@ body, html {
     background-repeat: no-repeat;
     background-position: center;
     opacity: 0.6;
+    margin-right: 8px; /* Add space between handle and title text */
 }
 
 .tabs-container {
     display: flex;
+    flex-wrap: wrap; /* Allow pills to wrap to the next line */
+    gap: 5px; /* Add gap between pills, including wrapped lines */
     margin-bottom: 10px; /* Reduced margin */
 }
 
@@ -105,27 +108,29 @@ body, html {
     padding: 6px 10px; /* Reduced padding */
     font-size: 12px; /* Reduced font size */
     text-align: center;
-    background-color: rgba(0, 0, 0, 0.05);
-    border: none;
+    background-color: rgba(255, 255, 255, 0.1); /* Semi-transparent for frosted glass look */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
     border-radius: 12px; /* Pill shape */
-    margin-right: 5px;
+    /* margin-right: 5px; */ /* Replaced by gap in .tabs-container */
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease;
-    color: #555;
+    transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+    color: #eee; /* Light text color for dark background */
 }
 
 .tab-pill:last-child {
-    margin-right: 0;
+    margin-right: 0; /* Still useful if gap isn't fully supported or for specific row endings */
 }
 
 .tab-pill.active {
-    background-color: rgba(0, 122, 255, 0.7); /* iOS-like blue */
+    background-color: rgba(0, 122, 255, 0.4); /* Semi-transparent iOS-like blue */
     color: white;
     font-weight: 500;
+    border-color: rgba(0, 122, 255, 0.6);
 }
 
 .tab-pill:hover:not(.active) {
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .tab-panel {
@@ -145,13 +150,13 @@ body, html {
     display: block;
     font-size: 11px; /* Reduced font size */
     margin-bottom: 3px; /* Reduced margin */
-    color: #444; /* Slightly darker for better readability on glass */
+    color: #ccc; /* Adjusted for darker background */
 }
 
 .control-group label span {
     float: right;
     font-weight: normal;
-    color: #555; /* Slightly darker for better readability on glass */
+    color: #bbb; /* Adjusted for darker background */
 }
 
 .control-group input[type="range"] {
@@ -176,7 +181,7 @@ input[type="range"]::-webkit-slider-runnable-track {
     width: 100%;
     height: 4px; /* Slimmer track */
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.15); /* Light grey track */
+    background: rgba(255, 255, 255, 0.15); /* Light grey track, adjusted for dark bg */
     border-radius: 2px;
 }
 
@@ -186,7 +191,7 @@ input[type="range"]::-webkit-slider-thumb {
     height: 14px; /* Slimmer thumb */
     width: 14px;  /* Slimmer thumb */
     border-radius: 50%;
-    background: #f8f8f8; /* White thumb */
+    background: #e0e0e0; /* Lighter thumb for dark bg */
     cursor: pointer;
     margin-top: -5px; /* Vertically center thumb on track ( (track_height - thumb_height) / 2 ) */
     box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Subtle shadow for depth */
@@ -198,7 +203,7 @@ input[type="range"]::-moz-range-track {
     width: 100%;
     height: 4px; /* Slimmer track */
     cursor: pointer;
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.15); /* Adjusted for dark bg */
     border-radius: 2px;
     border: none;
 }
@@ -207,7 +212,7 @@ input[type="range"]::-moz-range-thumb {
     height: 14px; /* Slimmer thumb */
     width: 14px; /* Slimmer thumb */
     border-radius: 50%;
-    background: #f8f8f8;
+    background: #e0e0e0; /* Adjusted for dark bg */
     cursor: pointer;
     border: 1px solid rgba(0,0,0,0.05);
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
@@ -224,12 +229,12 @@ input[type="range"]::-ms-track {
 }
 
 input[type="range"]::-ms-fill-lower {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.15); /* Adjusted for dark bg */
     border-radius: 2px;
 }
 
 input[type="range"]::-ms-fill-upper {
-    background: rgba(0, 0, 0, 0.15);
+    background: rgba(255, 255, 255, 0.15); /* Adjusted for dark bg */
     border-radius: 2px;
 }
 
@@ -237,7 +242,7 @@ input[type="range"]::-ms-thumb {
     height: 14px; /* Slimmer thumb */
     width: 14px; /* Slimmer thumb */
     border-radius: 50%;
-    background: #f8f8f8;
+    background: #e0e0e0; /* Adjusted for dark bg */
     cursor: pointer;
     margin-top: 0px; /* Edge handles thumb positioning differently */
     box-shadow: 0 1px 3px rgba(0,0,0,0.2);
@@ -249,14 +254,38 @@ input[type="range"]::-ms-thumb {
     margin-top: 10px; /* Reduced margin */
     margin-bottom: 6px; /* Reduced margin */
     font-weight: 500;
-    color: #333; /* Ensure readability */
+    color: #ddd; /* Ensure readability on dark bg */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-/* Separator line */
+/* Inline toggle switch styling */
+.inline-toggle {
+    width: 40px !important;
+    height: 20px !important;
+    margin: 0;
+}
+
+.inline-toggle .toggle-slider {
+    border-radius: 20px;
+}
+
+.inline-toggle .toggle-slider:before {
+    height: 14px;
+    width: 14px;
+    left: 2px;
+    bottom: 2px;
+}
+
+.inline-toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
 .separator {
     border: none;
     height: 1px;
-    background-color: rgba(0, 0, 0, 0.1);
+    background-color: rgba(255, 255, 255, 0.1); /* Adjusted for dark bg */
     margin: 8px 0; /* Reduced margin */
 }
 
@@ -309,7 +338,7 @@ input[type="range"]::-ms-thumb {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.3);
+    background-color: rgba(255, 255, 255, 0.2); /* Adjusted for dark bg */
     border: 1px solid rgba(255, 255, 255, 0.4);
     border-radius: 24px;
     transition: 0.2s;
@@ -322,19 +351,15 @@ input[type="range"]::-ms-thumb {
     width: 18px;
     left: 2px;
     bottom: 2px;
-    background-color: white;
+    background-color: #e0e0e0; /* Adjusted for dark bg */
     border-radius: 50%;
     transition: 0.2s;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 input:checked + .toggle-slider {
-    background-color: rgba(0, 122, 255, 0.6);
-    border-color: rgba(0, 122, 255, 0.8);
-}
-
-input:checked + .toggle-slider:before {
-    transform: translateX(26px);
+    background-color: rgba(0, 122, 255, 0.5); /* Adjusted for dark bg */
+    border-color: rgba(0, 122, 255, 0.7);
 }
 
 /* Grid Spacing Slider */
@@ -398,8 +423,8 @@ input:checked + .toggle-slider:before {
 #controls-pane h3,
 #controls-pane label {
     /* Example: Adjust text color if needed for readability */
-    /* color: #eee; */ /* If the WebGL glass behind is dark */
-    /* color: #333; */ /* If the WebGL glass behind is light */
+    /* color: #eee; */ /* If the WebGL glass behind is dark - this is now the default */
+    color: #ccc; /* Default label color adjusted */
 }
 
 #chromaticAberrationAmountControlGroup {

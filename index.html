@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Liquid Glass Demo</title>
+    <link rel="icon" href="data:,"> <!-- This line prevents the browser from requesting a favicon -->
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -13,14 +14,14 @@
 
     <div id="controls-pane">
         <h3 id="controls-title">
-            <span class="drag-handle"></span>
-            Liquid Glass Controls
+            <span class="title-text">Liquid Glass Controls</span>
         </h3>
 
         <div class="tabs-container">
             <button class="tab-pill active" data-tab-target="#tab-shape">Shape</button>
             <button class="tab-pill" data-tab-target="#tab-refraction">Refraction</button>
             <button class="tab-pill" data-tab-target="#tab-effects">Effects</button>
+            <button class="tab-pill" data-tab-target="#tab-reflections">Reflections</button> <!-- New Tab -->
         </div>
 
         <div id="tab-shape" class="tab-panel active">
@@ -62,18 +63,17 @@
             </div>
 
             <hr class="separator">
-            <h4>Chromatic Aberration</h4>
-            <div class="control-group toggle-control-group">
-                <label for="chromaticAberrationToggle">Enable:</label>
-                <label class="toggle-switch">
+            <h4>Chromatic Aberration
+                <label class="toggle-switch inline-toggle">
                     <input type="checkbox" id="chromaticAberrationToggle"> 
                     <span class="toggle-slider"></span>
                 </label>
-            </div>
+            </h4>
             <div class="control-group" id="chromaticAberrationAmountControlGroup"> <!-- Wrapper for conditional visibility -->
                 <label for="chromaticAberrationSlider">Amount: <span id="chromaticAberrationValue"></span></label>
                 <input type="range" id="chromaticAberrationSlider" min="0" max="20" step="0.1" value="0.0">
             </div>
+            <!-- Removed <hr class="separator"> that was here, as Chromatic Aberration is the last item in this tab now -->
         </div>
 
         <div id="tab-effects" class="tab-panel">
@@ -113,16 +113,17 @@
                 <label for="bottomGlowOpacitySlider">Opacity: <span id="bottomGlowOpacityValue"></span></label>
                 <input type="range" id="bottomGlowOpacitySlider" min="0" max="1" step="0.01" value="0.3">
             </div>
+            <!-- Removed <hr class="separator"> and Reflections section from here -->
+        </div>
 
-            <hr class="separator">
-            <h4>Reflections</h4>
-            <div class="control-group toggle-control-group">
-                <label for="reflectionToggle">Enable:</label>
-                <label class="toggle-switch">
+        <!-- New Tab Panel for Reflections -->
+        <div id="tab-reflections" class="tab-panel">
+            <h4>Reflections
+                <label class="toggle-switch inline-toggle">
                     <input type="checkbox" id="reflectionToggle"> 
                     <span class="toggle-slider"></span>
                 </label>
-            </div>
+            </h4>
             <div class="control-group" id="reflectionArcDegreesControlGroup">
                 <label for="reflectionArcDegreesSlider">Arc Degrees: <span id="reflectionArcDegreesValue"></span>°</label>
                 <input type="range" id="reflectionArcDegreesSlider" min="0" max="180" step="1" value="120">
@@ -144,7 +145,6 @@
                 <input type="range" id="reflectionArcPositionOffsetSlider" min="0" max="180" step="1" value="0">
             </div>
         </div>
-        <!-- Removed the <hr class="separator"> that was between Frostiness and Top Shadow -->
     </div>
 
     <!-- Grid Controls Panel (separate from controls pane) -->

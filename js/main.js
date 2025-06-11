@@ -67,8 +67,8 @@ class LiquidGlassApp {
     initializePositions() {
         return {
             liquidGlassCenterPosition: { x: 0, y: 0 },
-            controlPanelPosition: { x: 0, y: 0 }, // Will be set in updateElementPositions
-            controlPanelSize: { x: 340, y: 500 },
+            controlPanelPosition: { x: 0, y: 0 }, // Will be updated from HTML position
+            controlPanelSize: { x: 320, y: 500 }, // Will be updated from HTML size
             addImageButtonPosition: { x: 100, y: 100 },
             addImageButtonSize: { x: 50, y: 50 },
             gridControlsPosition: { x: 200, y: 100 },
@@ -85,7 +85,7 @@ class LiquidGlassApp {
             gridControlsCornerRadius: 25,
             gridControlsDistortionThickness: 8,
             gridLineColorVal: [0, 0, 0, 0.15],
-            pageBackgroundColorVal: [221/255, 225/255, 231/255, 1.0]
+            pageBackgroundColorVal: [51/255, 51/255, 51/255, 1.0] // Changed to #333
         };
     }
 
@@ -188,25 +188,19 @@ class LiquidGlassApp {
             this.backgroundImagesData,
             () => this.render()
         );
-        this.uiControls.setGL(this.gl); // Provide GL context to UI controls
+        this.uiControls.setGL(this.gl);
         this.uiControls.initialize();
 
-        // Add ResizeObserver for the control panel
+        // Add ResizeObserver for the control panel to update GL position when size changes
         const controlPanelElement = this.uiControls.getUIElements().controlPanel;
         if (controlPanelElement) {
             this.controlPanelResizeObserver = new ResizeObserver(entries => {
-                // We only observe one element, so we can take the first entry
-                // for (let entry of entries) { // Loop if observing multiple elements
-                //     const { width, height } = entry.contentRect;
-                //     // console.log(`Control panel resized to: ${width} x ${height}`);
-                // }
-                // Call updateElementPositions to re-calculate size and position for WebGL
-                this.updateElementPositions();
-                this.render();
+                // Update GL coordinates when panel size changes
+                if (this.interactionHandler) {
+                    this.interactionHandler.updateControlPanelGLPosition();
+                }
             });
             this.controlPanelResizeObserver.observe(controlPanelElement);
-        } else {
-            // console.warn("Control panel element not found for ResizeObserver."); // Removed this line
         }
     }
 
@@ -217,9 +211,9 @@ class LiquidGlassApp {
             this.positions,
             this.uiControls.getUIElements(),
             () => this.render(),
-            this.backgroundImagesData // Pass background images data
+            this.backgroundImagesData
         );
-        this.interactionHandler.setGL(this.gl); // Provide GL context for texture cleanup
+        this.interactionHandler.setGL(this.gl);
         this.interactionHandler.initialize();
         
         window.addEventListener('resize', () => this.resizeCanvas());
@@ -248,7 +242,6 @@ class LiquidGlassApp {
             let totalWidth = 0;
 
             defaultImages.forEach(img => {
-                // Recalculate size based on new canvas height
                 img.size.y = this.canvas.height * 0.8;
                 img.size.x = img.size.y * img.aspectRatio;
                 totalWidth += img.size.x;
@@ -262,35 +255,19 @@ class LiquidGlassApp {
             
             defaultImages.forEach((img) => {
                 img.position.x = currentX;
-                img.position.y = (this.canvas.height - img.size.y) / 2; // Center vertically
+                img.position.y = (this.canvas.height - img.size.y) / 2;
                 currentX += img.size.x + spacing;
             });
         }
         
-        this.updateElementPositions();
-        this.render();
-    }
-
-    updateElementPositions() {
-        // Update control panel position from HTML
-        const htmlPaneRect = this.uiControls.getUIElements().controlPanel.getBoundingClientRect();
-        const canvasRect = this.canvas.getBoundingClientRect();
+        this.updateIconPositions();
         
-        this.positions.controlPanelSize.x = htmlPaneRect.width;
-        this.positions.controlPanelSize.y = htmlPaneRect.height;
-        
-        // On initial load, position control panel in middle right with 50px gap
-        if (this.positions.controlPanelPosition.x === 0 && this.positions.controlPanelPosition.y === 0) {
-            this.positions.controlPanelPosition.x = this.canvas.width - 50 - this.positions.controlPanelSize.x * 0.5;
-            this.positions.controlPanelPosition.y = this.canvas.height * 0.5;
-        } else {
-            // Update from current HTML position (when dragging)
-            this.positions.controlPanelPosition.x = (htmlPaneRect.left - canvasRect.left) + this.positions.controlPanelSize.x * 0.5;
-            this.positions.controlPanelPosition.y = this.canvas.height - (htmlPaneRect.top - canvasRect.top) - this.positions.controlPanelSize.y * 0.5;
+        // Update control panel GL position after canvas resize
+        if (this.interactionHandler) {
+            this.interactionHandler.updateControlPanelGLPosition();
         }
         
-        // Update icon positions
-        this.updateIconPositions();
+        this.render();
     }
 
     updateIconPositions() {

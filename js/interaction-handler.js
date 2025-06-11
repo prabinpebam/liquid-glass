@@ -7,7 +7,7 @@ export class InteractionHandler {
         this.canvas = canvas;
         this.liquidGlassParams = liquidGlassParams;
         this.positions = positions;
-        this.uiElements = uiElements; // e.g., { controlPanel, addImageIcon, gridIcon, imageUpload, /* ...sliders... */ }
+        this.uiElements = uiElements;
         this.render = renderCallback;
         this.backgroundImagesData = backgroundImagesData;
         this.gl = null;
@@ -15,7 +15,6 @@ export class InteractionHandler {
         // Interaction state
         this.isElementDragging = false;
         this.isElementResizing = false;
-        this.isControlPanelDragging = false;
         this.dragTarget = null;
         this.resizeHandle = null;
         this.dragStartX = 0;
@@ -24,15 +23,12 @@ export class InteractionHandler {
         this.initialLiquidGlassCenterY = 0;
         this.initialBackgroundImagePos = null;
         this.initialElementSize = null;
-        this.initialControlPanelPosition = null;
-
-        this.canvasRect = null;
-        this.lastRectUpdate = 0;
-        this.RECT_UPDATE_INTERVAL = 100;
     }
 
     initialize() {
         this.setupEventListeners();
+        // Update GL coordinates from HTML panel position on initialization
+        this.updateControlPanelGLPosition();
     }
 
     setupEventListeners() {
@@ -40,14 +36,38 @@ export class InteractionHandler {
         this.canvas.addEventListener('mousedown', (e) => this.handleMouseDown(e));
         this.canvas.addEventListener('contextmenu', (e) => this.handleContextMenu(e));
         document.addEventListener('mouseup', () => this.handleMouseUp());
-        
-        // Control panel drag
-        if (this.uiElements.controlPanelTitle) {
-            this.uiElements.controlPanelTitle.addEventListener('mousedown', (e) => this.handleControlPanelDragStart(e));
-        }
-        
-        document.addEventListener('mousemove', (e) => this.handleDocumentMouseMove(e));
         document.addEventListener('click', (e) => this.hideContextMenu(e));
+        
+        // Listen for window resize to update control panel GL position
+        window.addEventListener('resize', () => {
+            setTimeout(() => this.updateControlPanelGLPosition(), 0);
+        });
+    }
+
+    /**
+     * Updates GL coordinates based on current HTML control panel position and size
+     * This is the one-way sync from HTML to GL for the liquid glass background
+     */
+    updateControlPanelGLPosition() {
+        if (!this.uiElements.controlPanel || !this.canvas) return;
+
+        const panelRect = this.uiElements.controlPanel.getBoundingClientRect();
+        const canvasRect = this.canvas.getBoundingClientRect();
+        
+        // Update stored panel size with actual dimensions
+        this.positions.controlPanelSize.x = panelRect.width;
+        this.positions.controlPanelSize.y = panelRect.height;
+        
+        // Convert HTML viewport position to GL center coordinates
+        const htmlLeftRelativeToCanvas = panelRect.left - canvasRect.left;
+        const htmlTopRelativeToCanvas = panelRect.top - canvasRect.top;
+        
+        // Calculate GL center coordinates (Y is inverted in GL)
+        this.positions.controlPanelPosition.x = htmlLeftRelativeToCanvas + panelRect.width * 0.5;
+        this.positions.controlPanelPosition.y = this.canvas.height - (htmlTopRelativeToCanvas + panelRect.height * 0.5);
+        
+        // Trigger render to update the liquid glass background
+        this.render();
     }
 
     getCanvasMousePosition(e) {
@@ -134,8 +154,6 @@ export class InteractionHandler {
     }
 
     handleMouseMove(e) {
-        if (this.isControlPanelDragging) return;
-        
         if (this.isElementDragging) {
             const mousePos = this.getCanvasMousePosition(e);
             const dx = mousePos.x - this.dragStartX;
@@ -228,57 +246,7 @@ export class InteractionHandler {
         }
     }
 
-    handleControlPanelDragStart(e) {
-        this.isControlPanelDragging = true;
-        this.uiElements.controlPanelTitle.style.cursor = 'grabbing';
-        this.dragStartX = e.clientX;
-        this.dragStartY = e.clientY;
-        this.initialControlPanelPosition = { ...this.positions.controlPanelPosition };
-        
-        this.canvasRect = this.canvas.getBoundingClientRect();
-        this.lastRectUpdate = Date.now();
-        
-        e.preventDefault();
-        e.stopPropagation();
-    }
-
-    handleDocumentMouseMove(e) {
-        if (this.isControlPanelDragging) {
-            const dx = e.clientX - this.dragStartX;
-            const dy = e.clientY - this.dragStartY;
-            
-            this.positions.controlPanelPosition.x = this.initialControlPanelPosition.x + dx;
-            this.positions.controlPanelPosition.y = this.initialControlPanelPosition.y - dy;
-            
-            this.syncHTMLPanePosition();
-            
-            if (Date.now() - this.lastRectUpdate > 16) {
-                this.render();
-            }
-        }
-    }
-
-    syncHTMLPanePosition() {
-        const now = Date.now();
-        if (!this.canvasRect || now - this.lastRectUpdate > this.RECT_UPDATE_INTERVAL) {
-            this.canvasRect = this.canvas.getBoundingClientRect();
-            this.lastRectUpdate = now;
-        }
-        
-        const htmlLeft = this.positions.controlPanelPosition.x - this.positions.controlPanelSize.x * 0.5;
-        const htmlTop = this.canvas.height - this.positions.controlPanelPosition.y - this.positions.controlPanelSize.y * 0.5;
-        
-        this.uiElements.controlPanel.style.transform = `translate(${htmlLeft}px, ${htmlTop}px)`;
-        this.uiElements.controlPanel.style.left = '0px';
-        this.uiElements.controlPanel.style.top = '0px';
-        this.uiElements.controlPanel.style.right = 'auto';
-    }
-
     handleMouseUp() {
-        if (this.isControlPanelDragging) {
-            this.isControlPanelDragging = false;
-            this.uiElements.controlPanelTitle.style.cursor = 'grab';
-        }
         if (this.isElementDragging || this.isElementResizing) {
             this.isElementDragging = false;
             this.isElementResizing = false;
@@ -289,9 +257,6 @@ export class InteractionHandler {
     }
 
     handleMouseDown(e) {
-        // Only handle canvas interactions if not dragging control panel
-        if (this.isControlPanelDragging) return;
-        
         const mousePos = this.getCanvasMousePosition(e);
         
         // Check if clicking on add image button
@@ -422,5 +387,10 @@ export class InteractionHandler {
 
     getGL() {
         return this.gl;
+    }
+
+    setSaveControlPanelPositionCallback(callback) {
+        // No-op: Control panel positioning is now handled purely by CSS
+        // This method is kept for compatibility with existing code
     }
 }
