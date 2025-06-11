@@ -56,6 +56,9 @@ The right-side control panel allows you to adjust:
 - **Refraction Strength**: Intensity of the glass distortion effect
 - **Glass Alpha**: Transparency of the glass tint
 - **Frostiness**: Amount of blur/frosting effect
+- **Chromatic Aberration**:
+    - **Enable**: Toggles the chromatic aberration effect on/off.
+    - **Amount**: Intensity of the color fringing effect at the edges when enabled.
 - **Top Shadow**:
     - **Blur**: Blur radius of the top inner shadow.
     - **X Offset**: Horizontal offset of the top inner shadow.

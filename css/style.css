@@ -6,7 +6,7 @@
 
 body, html {
     height: 100%;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     background: #dde1e7;
     overflow: hidden;
 }
@@ -22,18 +22,17 @@ body, html {
 }
 
 #controls-pane {
-    position: fixed;
-    right: 50px; /* 50px gap from right edge */
-    top: 50%; /* Start at vertical center */
-    transform: translateY(-50%); /* Center vertically */
-    width: 300px;
-    padding: 20px;
-    border-radius: 20px;
+    position: absolute;
+    top: 50%; /* Initial position, will be adjusted by JS */
+    right: 20px; /* Initial position */
+    transform: translateY(-50%); /* Vertically center based on its own height */
+    width: 320px; /* Fixed width */
+    max-height: 90vh; /* Max height to prevent overflow and allow scrolling */
+    padding: 15px; /* Reduced padding */
+    box-sizing: border-box;
+    border-radius: 18px; /* Consistent with WebGL glass */
     z-index: 10;
-    max-height: 90vh;
-    overflow-y: auto;
-    
-    /* Remove glass effect - will be rendered in canvas */
+    overflow-x: hidden; /* Prevent horizontal scroll */
     background-color: transparent; /* Remove HTML background */
     overflow-y: auto; /* Ensure scrollbar appears when content overflows */
 
@@ -69,66 +68,17 @@ body, html {
     height: 0;
 }
 
-/* Tabs Styling */
-.tabs-container {
-    display: flex;
-    margin-bottom: 20px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.tab-pill {
-    flex-grow: 1;
-    padding: 10px 5px;
-    cursor: pointer;
-    border: none;
-    background-color: transparent;
-    color: #555;
-    font-size: 0.9em;
-    font-weight: 500;
-    text-align: center;
-    border-bottom: 3px solid transparent; /* For active indicator */
-    transition: color 0.2s ease, border-bottom-color 0.2s ease;
-    outline: none;
-}
-
-.tab-pill:hover {
-    color: #111;
-}
-
-.tab-pill.active {
-    color: #007aff; /* Apple blue for active tab */
-    border-bottom-color: #007aff;
-}
-
-.tab-panel {
-    display: none; /* Hide inactive tab panels */
-}
-
-.tab-panel.active {
-    display: block; /* Show active tab panel */
-}
-
-/* Adjust h4 styling within tab panels if needed */
-#controls-pane .tab-panel h4 {
-    margin-top: 10px; /* Add some space if it's the first element */
-    margin-bottom: 15px;
-    text-align: left;
-    font-size: 0.95em;
-    color: #444;
-    font-weight: 600;
-}
-
 #controls-title {
+    font-size: 16px; /* Reduced font size */
+    font-weight: 600;
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 10px; /* Reduced margin */
+    padding-bottom: 8px; /* Reduced padding */
     text-align: center;
-    color: #333;
-    cursor: grab;
-    user-select: none;
+    cursor: grab; /* For dragging */
     display: flex;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    justify-content: center; /* Center title text */
 }
 
 #controls-title:active {
@@ -145,15 +95,63 @@ body, html {
     opacity: 0.6;
 }
 
+.tabs-container {
+    display: flex;
+    margin-bottom: 10px; /* Reduced margin */
+}
+
+.tab-pill {
+    flex-grow: 1;
+    padding: 6px 10px; /* Reduced padding */
+    font-size: 12px; /* Reduced font size */
+    text-align: center;
+    background-color: rgba(0, 0, 0, 0.05);
+    border: none;
+    border-radius: 12px; /* Pill shape */
+    margin-right: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    color: #555;
+}
+
+.tab-pill:last-child {
+    margin-right: 0;
+}
+
+.tab-pill.active {
+    background-color: rgba(0, 122, 255, 0.7); /* iOS-like blue */
+    color: white;
+    font-weight: 500;
+}
+
+.tab-pill:hover:not(.active) {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.tab-panel {
+    display: none;
+    padding-top: 5px; /* Reduced padding */
+}
+
+.tab-panel.active {
+    display: block;
+}
+
 .control-group {
-    margin-bottom: 15px;
+    margin-bottom: 8px; /* Reduced margin */
 }
 
 .control-group label {
     display: block;
-    margin-bottom: 5px;
-    font-size: 0.9em;
-    color: #555;
+    font-size: 11px; /* Reduced font size */
+    margin-bottom: 3px; /* Reduced margin */
+    color: #444; /* Slightly darker for better readability on glass */
+}
+
+.control-group label span {
+    float: right;
+    font-weight: normal;
+    color: #555; /* Slightly darker for better readability on glass */
 }
 
 .control-group input[type="range"] {
@@ -161,39 +159,105 @@ body, html {
     box-sizing: border-box;
 }
 
-#controls-pane hr {
-    border: none;
-    border-top: 1px solid #ccc;
-    margin: 20px 0;
-}
-
-.control-group select {
+/* Slider Styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
     width: 100%;
-    padding: 5px;
-    box-sizing: border-box;
+    height: 16px; /* Overall height of the slider area */
+    background: transparent; /* Make default track transparent */
+    outline: none;
+    padding: 0;
+    margin: 0; /* Remove default margins */
 }
 
-/* Drop zone styling */
-.drop-zone {
-    position: relative;
+/* Webkit (Chrome, Safari, Edge, Opera) */
+input[type="range"]::-webkit-slider-runnable-track {
+    width: 100%;
+    height: 4px; /* Slimmer track */
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.15); /* Light grey track */
+    border-radius: 2px;
 }
 
-.drop-zone.drag-over::after {
-    content: "Drop image here";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 123, 255, 0.1);
-    border: 3px dashed rgba(0, 123, 255, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    color: rgba(0, 123, 255, 0.8);
-    z-index: 1000;
-    pointer-events: none;
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 14px; /* Slimmer thumb */
+    width: 14px;  /* Slimmer thumb */
+    border-radius: 50%;
+    background: #f8f8f8; /* White thumb */
+    cursor: pointer;
+    margin-top: -5px; /* Vertically center thumb on track ( (track_height - thumb_height) / 2 ) */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2); /* Subtle shadow for depth */
+    border: 1px solid rgba(0,0,0,0.05); /* Very subtle border */
+}
+
+/* Mozilla Firefox */
+input[type="range"]::-moz-range-track {
+    width: 100%;
+    height: 4px; /* Slimmer track */
+    cursor: pointer;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+    border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+    height: 14px; /* Slimmer thumb */
+    width: 14px; /* Slimmer thumb */
+    border-radius: 50%;
+    background: #f8f8f8;
+    cursor: pointer;
+    border: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Microsoft Edge (Legacy - for older Edge, modern Edge uses WebKit styles) */
+input[type="range"]::-ms-track {
+    width: 100%;
+    height: 4px; /* Slimmer track */
+    cursor: pointer;
+    background: transparent;
+    border-color: transparent;
+    color: transparent;
+}
+
+input[type="range"]::-ms-fill-lower {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+}
+
+input[type="range"]::-ms-fill-upper {
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 2px;
+}
+
+input[type="range"]::-ms-thumb {
+    height: 14px; /* Slimmer thumb */
+    width: 14px; /* Slimmer thumb */
+    border-radius: 50%;
+    background: #f8f8f8;
+    cursor: pointer;
+    margin-top: 0px; /* Edge handles thumb positioning differently */
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+/* Headings within control pane */
+#controls-pane h4 {
+    font-size: 13px; /* Reduced font size */
+    margin-top: 10px; /* Reduced margin */
+    margin-bottom: 6px; /* Reduced margin */
+    font-weight: 500;
+    color: #333; /* Ensure readability */
+}
+
+/* Separator line */
+.separator {
+    border: none;
+    height: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin: 8px 0; /* Reduced margin */
 }
 
 /* Grid Controls Panel */
@@ -321,4 +385,26 @@ input:checked + .toggle-slider:before {
 #grid-icon {
     width: 20px;
     height: 20px;
+}
+
+/* Ensure control group and other elements inside controls-pane have appropriate styling */
+/* if their background was previously relying on the controls-pane background */
+#controls-pane .control-group {
+    /* Example: if text color needs adjustment for better readability against the new transparent background */
+    /* color: #333; */ /* Adjust as needed */
+    margin-bottom: 8px; /* Existing or desired margin */
+}
+
+#controls-pane h3,
+#controls-pane label {
+    /* Example: Adjust text color if needed for readability */
+    /* color: #eee; */ /* If the WebGL glass behind is dark */
+    /* color: #333; */ /* If the WebGL glass behind is light */
+}
+
+#chromaticAberrationAmountControlGroup {
+    transition: opacity 0.3s ease, max-height 0.3s ease-out, margin-bottom 0.3s ease; /* Added margin-bottom */
+    overflow: hidden;
+    /* margin-bottom will be set by default .control-group style, 
+       but we can remove it when hidden if needed */
 }

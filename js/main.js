@@ -37,7 +37,11 @@ class LiquidGlassApp {
             bottomGlowBlur: 30.0,
             bottomGlowOffsetX: 0.0,
             bottomGlowOffsetY: -15.0,
-            bottomGlowOpacity: 0.3 // Default opacity
+            bottomGlowOpacity: 0.3, // Default opacity
+
+            // Chromatic Aberration
+            enableChromaticAberration: false, // New toggle state
+            chromaticAberrationAmount: 0.0 
         };
         
         this.backgroundImagesData = [];
@@ -194,7 +198,7 @@ class LiquidGlassApp {
             });
             this.controlPanelResizeObserver.observe(controlPanelElement);
         } else {
-            console.warn("Control panel element not found for ResizeObserver.");
+            // console.warn("Control panel element not found for ResizeObserver."); // Removed this line
         }
     }
 
@@ -395,6 +399,10 @@ class LiquidGlassApp {
         gl.uniform1f(u.bottomGlowOffsetX, this.liquidGlassParams.bottomGlowOffsetX);
         gl.uniform1f(u.bottomGlowOffsetY, this.liquidGlassParams.bottomGlowOffsetY);
         gl.uniform1f(u.bottomGlowOpacity, this.liquidGlassParams.bottomGlowOpacity);
+
+        // Chromatic Aberration
+        gl.uniform1i(u.enableChromaticAberration, this.liquidGlassParams.enableChromaticAberration);
+        gl.uniform1f(u.chromaticAberrationAmount, this.liquidGlassParams.chromaticAberrationAmount);
     }
 }
 

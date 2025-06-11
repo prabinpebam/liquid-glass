@@ -25,6 +25,12 @@ export class UIControls {
         this.frostinessSlider = document.getElementById('frostinessSlider');
         this.frostinessValue = document.getElementById('frostinessValue');
         
+        // Chromatic Aberration Controls
+        this.chromaticAberrationToggle = document.getElementById('chromaticAberrationToggle');
+        this.chromaticAberrationSlider = document.getElementById('chromaticAberrationSlider');
+        this.chromaticAberrationValue = document.getElementById('chromaticAberrationValue');
+        this.chromaticAberrationAmountControlGroup = document.getElementById('chromaticAberrationAmountControlGroup');
+
         // Grid Controls
         this.gridToggle = document.getElementById('gridToggle');
         this.gridSpacingSlider = document.getElementById('gridSpacingSlider');
@@ -81,6 +87,22 @@ export class UIControls {
         );
         this.setupSlider(this.frostinessSlider, this.frostinessValue, 'frostiness', 1);
         
+        // Chromatic Aberration Controls
+        if (this.chromaticAberrationToggle) {
+            this.chromaticAberrationToggle.checked = this.liquidGlassParams.enableChromaticAberration;
+            this.updateChromaticAberrationAmountVisibility(); // Initial visibility state
+            this.chromaticAberrationToggle.addEventListener('change', (e) => {
+                this.liquidGlassParams.enableChromaticAberration = e.target.checked;
+                console.log(`Checkbox changed: enableChromaticAberration, New value: ${this.liquidGlassParams.enableChromaticAberration}`);
+                this.updateChromaticAberrationAmountVisibility();
+                this.renderCallback();
+            });
+        } else {
+            console.warn("chromaticAberrationToggle element not found.");
+        }
+        this.setupSlider(this.chromaticAberrationSlider, this.chromaticAberrationValue, 'chromaticAberrationAmount', 1);
+
+
         // Grid Controls
         if (this.gridToggle) {
             this.gridToggle.checked = this.liquidGlassParams.showGrid;
@@ -128,6 +150,23 @@ export class UIControls {
         }
         console.log("UIControls initialization complete.");
         this.initializeTabs(); // Call tab initialization
+    }
+
+    updateChromaticAberrationAmountVisibility() {
+        if (this.chromaticAberrationAmountControlGroup) {
+            if (this.liquidGlassParams.enableChromaticAberration) {
+                this.chromaticAberrationAmountControlGroup.style.maxHeight = '100px'; // Or enough to show content
+                this.chromaticAberrationAmountControlGroup.style.opacity = '1';
+                this.chromaticAberrationAmountControlGroup.style.pointerEvents = 'auto';
+                this.chromaticAberrationSlider.disabled = false;
+
+            } else {
+                this.chromaticAberrationAmountControlGroup.style.maxHeight = '0';
+                this.chromaticAberrationAmountControlGroup.style.opacity = '0';
+                this.chromaticAberrationAmountControlGroup.style.pointerEvents = 'none';
+                this.chromaticAberrationSlider.disabled = true;
+            }
+        }
     }
 
     initializeTabs() {

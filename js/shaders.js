@@ -44,6 +44,10 @@ export const fragmentShaderSource = `
     uniform float u_bottomGlowOffsetY;
     uniform float u_bottomGlowOpacity;
 
+    // Chromatic Aberration
+    uniform bool u_enableChromaticAberration; // Changed from float to bool for the toggle
+    uniform float u_chromaticAberrationAmount;
+
     // Background image system
     uniform bool u_hasBackgroundImages;
     uniform sampler2D u_backgroundImageTextures[8];
@@ -346,33 +350,82 @@ export const fragmentShaderSource = `
             finalColor = renderBackground(currentPixelCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
         } else {
             // Render main liquid glass effect
-            vec2 samplingCoord = currentPixelCoord;
-            
-            // Apply refraction distortion based on distance from edge
-            if (isInDistortingEdge && u_refractionStrength > 0.0) {
-                float distortionCurve = 2.0; // Exponential falloff curve
-                float distortionMagnitude = u_refractionStrength * pow(clamp(edgeDistortionAmount, 0.0, 1.0), distortionCurve);
-                samplingCoord = currentPixelCoord - normalize(relativeToLiquidGlassCenter) * distortionMagnitude;
+            vec2 normDirToCenter = normalize(relativeToLiquidGlassCenter);
+
+            if (length(relativeToLiquidGlassCenter) < 0.001) { // Avoid NaN at exact center
+                normDirToCenter = vec2(0.707, 0.707); // Default direction
             }
 
-            // Apply frosting effect if enabled
             vec4 refractedBackground;
+            // Determine if CA should be active for this specific pixel:
+            // only if globally enabled AND in the distorting edge AND amount is significant.
+            bool caActiveForCurrentPixel = u_enableChromaticAberration && isInDistortingEdge && u_chromaticAberrationAmount > 0.001;
+
+            // Calculate base distortion magnitude (primarily for Green channel or non-CA rendering)
+            // This will be 0.0 if inNonDistortingCenter because isInDistortingEdge will be false.
+            float baseDistortionMagnitude = 0.0;
+            if (isInDistortingEdge) {
+                float distortionCurve = 2.0; // Exponential falloff curve
+                baseDistortionMagnitude = u_refractionStrength * pow(clamp(edgeDistortionAmount, 0.0, 1.0), distortionCurve);
+            }
+            // Note: If isInNonDistortingCenter, baseDistortionMagnitude remains 0.0, ensuring no refraction.
+
             if (u_frostiness > 0.1) {
                 vec4 totalColor = vec4(0.0);
                 float sampleCount = 0.0;
                 
-                // Multi-sample blur for frosted glass effect
                 for (int x = -2; x <= 2; x++) {
                     for (int y = -2; y <= 2; y++) {
                         vec2 frostOffset = vec2(float(x), float(y)) * u_frostiness * 0.5;
-                        vec2 frostSamplePos = samplingCoord + frostOffset;
-                        totalColor += renderBackground(frostSamplePos, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                        // The base coordinate for this frosted sample, before any refraction
+                        vec2 baseFrostedPixelCoord = currentPixelCoord + frostOffset;
+
+                        if (caActiveForCurrentPixel) {
+                            // Calculate separate distortion magnitudes for R, G, B
+                            float rDistortion = max(0.0, baseDistortionMagnitude - u_chromaticAberrationAmount * 0.5);
+                            float gDistortion = baseDistortionMagnitude;
+                            float bDistortion = baseDistortionMagnitude + u_chromaticAberrationAmount * 0.5;
+
+                            vec2 rCoord = baseFrostedPixelCoord - normDirToCenter * rDistortion;
+                            vec2 gCoord = baseFrostedPixelCoord - normDirToCenter * gDistortion;
+                            vec2 bCoord = baseFrostedPixelCoord - normDirToCenter * bDistortion;
+                            
+                            vec4 gSampleColor = renderBackground(gCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                            totalColor.r += renderBackground(rCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor).r;
+                            totalColor.g += gSampleColor.g;
+                            totalColor.b += renderBackground(bCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor).b;
+                            totalColor.a += gSampleColor.a; // Alpha from green channel's path
+                        } else {
+                            // No CA for this pixel (globally off, or in center, or edge with CA off)
+                            // Use baseDistortionMagnitude (which is 0 if in center)
+                            vec2 samplingCoord = baseFrostedPixelCoord - normDirToCenter * baseDistortionMagnitude;
+                            totalColor += renderBackground(samplingCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                        }
                         sampleCount += 1.0;
                     }
                 }
                 refractedBackground = totalColor / sampleCount;
-            } else {
-                refractedBackground = renderBackground(samplingCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+            } else { // No frostiness
+                if (caActiveForCurrentPixel) {
+                    // Calculate separate distortion magnitudes for R, G, B
+                    float rDistortion = max(0.0, baseDistortionMagnitude - u_chromaticAberrationAmount * 0.5);
+                    float gDistortion = baseDistortionMagnitude;
+                    float bDistortion = baseDistortionMagnitude + u_chromaticAberrationAmount * 0.5;
+
+                    vec2 rCoord = currentPixelCoord - normDirToCenter * rDistortion;
+                    vec2 gCoord = currentPixelCoord - normDirToCenter * gDistortion;
+                    vec2 bCoord = currentPixelCoord - normDirToCenter * bDistortion;
+
+                    refractedBackground.r = renderBackground(rCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor).r;
+                    refractedBackground.g = renderBackground(gCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor).g;
+                    refractedBackground.b = renderBackground(bCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor).b;
+                    refractedBackground.a = renderBackground(gCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor).a; // Alpha from green
+                } else {
+                    // No CA for this pixel (globally off, or in center, or edge with CA off)
+                    // Use baseDistortionMagnitude (which is 0 if in center)
+                    vec2 samplingCoord = currentPixelCoord - normDirToCenter * baseDistortionMagnitude;
+                    refractedBackground = renderBackground(samplingCoord, u_gridSpacing, u_gridLineColor, u_pageBackgroundColor);
+                }
             }
 
             // Mix with glass material properties

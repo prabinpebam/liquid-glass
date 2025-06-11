@@ -55,6 +55,10 @@ export function getUniformLocations(gl, program) {
         bottomGlowOffsetY: gl.getUniformLocation(program, "u_bottomGlowOffsetY"),
         bottomGlowOpacity: gl.getUniformLocation(program, "u_bottomGlowOpacity"),
         
+        // Chromatic Aberration
+        enableChromaticAberration: gl.getUniformLocation(program, "u_enableChromaticAberration"),
+        chromaticAberrationAmount: gl.getUniformLocation(program, "u_chromaticAberrationAmount"),
+
         // Background rendering
         gridLineColor: gl.getUniformLocation(program, "u_gridLineColor"),
         gridSpacing: gl.getUniformLocation(program, "u_gridSpacing"),

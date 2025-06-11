@@ -7,10 +7,11 @@ export class InteractionHandler {
         this.canvas = canvas;
         this.liquidGlassParams = liquidGlassParams;
         this.positions = positions;
-        this.uiElements = uiElements;
-        this.renderCallback = renderCallback;
-        this.backgroundImagesData = backgroundImagesData; // Add background images data
-        
+        this.uiElements = uiElements; // e.g., { controlPanel, addImageIcon, gridIcon, imageUpload, /* ...sliders... */ }
+        this.render = renderCallback;
+        this.backgroundImagesData = backgroundImagesData;
+        this.gl = null;
+
         // Interaction state
         this.isElementDragging = false;
         this.isElementResizing = false;
@@ -147,7 +148,7 @@ export class InteractionHandler {
                 this.backgroundImagesData[this.dragTarget].position.x = this.initialBackgroundImagePos.x + dx;
                 this.backgroundImagesData[this.dragTarget].position.y = this.initialBackgroundImagePos.y + dy;
             }
-            this.renderCallback();
+            this.render();
         } else if (this.isElementResizing) {
             const mousePos = this.getCanvasMousePosition(e);
             const dx = mousePos.x - this.dragStartX;
@@ -158,10 +159,14 @@ export class InteractionHandler {
                 this.liquidGlassParams.rectangleHeight = Math.max(50, this.initialElementSize.y + dy);
                 
                 // Update UI controls
-                this.uiElements.rectangleWidthControl.slider.value = this.liquidGlassParams.rectangleWidth;
-                this.uiElements.rectangleWidthControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleWidth);
-                this.uiElements.rectangleHeightControl.slider.value = this.liquidGlassParams.rectangleHeight;
-                this.uiElements.rectangleHeightControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleHeight);
+                if (this.uiElements.rectangleWidthControl && this.uiElements.rectangleWidthControl.slider) {
+                    this.uiElements.rectangleWidthControl.slider.value = this.liquidGlassParams.rectangleWidth;
+                    this.uiElements.rectangleWidthControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleWidth);
+                }
+                if (this.uiElements.rectangleHeightControl && this.uiElements.rectangleHeightControl.slider) {
+                    this.uiElements.rectangleHeightControl.slider.value = this.liquidGlassParams.rectangleHeight;
+                    this.uiElements.rectangleHeightControl.valueDisplay.textContent = Math.round(this.liquidGlassParams.rectangleHeight);
+                }
             } else if (typeof this.resizeHandle === 'number') {
                 // Background image resize with aspect ratio constraint
                 const img = this.backgroundImagesData[this.resizeHandle];
@@ -171,7 +176,7 @@ export class InteractionHandler {
                 img.size.x = newWidth;
                 img.size.y = newHeight;
             }
-            this.renderCallback();
+            this.render();
         } else {
             this.updateCursor(e);
         }
@@ -248,7 +253,7 @@ export class InteractionHandler {
             this.syncHTMLPanePosition();
             
             if (Date.now() - this.lastRectUpdate > 16) {
-                this.renderCallback();
+                this.render();
             }
         }
     }
@@ -303,7 +308,7 @@ export class InteractionHandler {
             if (this.uiElements.gridToggle) {
                 this.uiElements.gridToggle.checked = this.liquidGlassParams.showGrid;
             }
-            this.renderCallback();
+            this.render();
             return;
         }
 
@@ -320,7 +325,7 @@ export class InteractionHandler {
             if (this.uiElements.gridSpacingSlider) {
                 this.uiElements.gridSpacingSlider.value = this.liquidGlassParams.gridSpacing;
             }
-            this.renderCallback();
+            this.render();
             return;
         }
 
@@ -406,7 +411,7 @@ export class InteractionHandler {
             this.backgroundImagesData.splice(imageIndex, 1);
             
             // Re-render the scene
-            this.renderCallback();
+            this.render();
         }
     }
 
