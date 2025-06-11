@@ -56,6 +56,24 @@ export class UIControls {
         this.bottomGlowOpacitySlider = document.getElementById('bottomGlowOpacitySlider');
         this.bottomGlowOpacityValue = document.getElementById('bottomGlowOpacityValue');
 
+        // Reflection Controls
+        this.reflectionToggle = document.getElementById('reflectionToggle');
+        this.reflectionArcDegreesSlider = document.getElementById('reflectionArcDegreesSlider');
+        this.reflectionArcDegreesValue = document.getElementById('reflectionArcDegreesValue');
+        this.reflectionArcDegreesControlGroup = document.getElementById('reflectionArcDegreesControlGroup');
+        this.reflectionThicknessSlider = document.getElementById('reflectionThicknessSlider');
+        this.reflectionThicknessValue = document.getElementById('reflectionThicknessValue');
+        this.reflectionThicknessControlGroup = document.getElementById('reflectionThicknessControlGroup');
+        this.reflectionOffsetSlider = document.getElementById('reflectionOffsetSlider');
+        this.reflectionOffsetValue = document.getElementById('reflectionOffsetValue');
+        this.reflectionOffsetControlGroup = document.getElementById('reflectionOffsetControlGroup');
+        this.reflectionOpacitySlider = document.getElementById('reflectionOpacitySlider');
+        this.reflectionOpacityValue = document.getElementById('reflectionOpacityValue');
+        this.reflectionOpacityControlGroup = document.getElementById('reflectionOpacityControlGroup');
+        this.reflectionArcPositionOffsetSlider = document.getElementById('reflectionArcPositionOffsetSlider');
+        this.reflectionArcPositionOffsetValue = document.getElementById('reflectionArcPositionOffsetValue');
+        this.reflectionArcPositionOffsetControlGroup = document.getElementById('reflectionArcPositionOffsetControlGroup');
+
         // UI Elements for interaction handler / other functionalities
         this.controlPanel = document.getElementById('controls-pane');
         this.addImageIcon = document.getElementById('add-image-icon');
@@ -138,6 +156,25 @@ export class UIControls {
         this.setupSlider(this.bottomGlowOffsetXSlider, this.bottomGlowOffsetXValue, 'bottomGlowOffsetX', 0, 'px');
         this.setupSlider(this.bottomGlowOffsetYSlider, this.bottomGlowOffsetYValue, 'bottomGlowOffsetY', 0, 'px');
         this.setupSlider(this.bottomGlowOpacitySlider, this.bottomGlowOpacityValue, 'bottomGlowOpacity', 2);
+
+        // Reflection Controls
+        if (this.reflectionToggle) {
+            this.reflectionToggle.checked = this.liquidGlassParams.enableReflection;
+            this.updateReflectionControlsVisibility(); // Initial visibility state
+            this.reflectionToggle.addEventListener('change', (e) => {
+                this.liquidGlassParams.enableReflection = e.target.checked;
+                console.log(`Checkbox changed: enableReflection, New value: ${this.liquidGlassParams.enableReflection}`);
+                this.updateReflectionControlsVisibility();
+                this.renderCallback();
+            });
+        } else {
+            console.warn("reflectionToggle element not found.");
+        }
+        this.setupSlider(this.reflectionArcDegreesSlider, this.reflectionArcDegreesValue, 'reflectionArcDegrees', 0, '°');
+        this.setupSlider(this.reflectionThicknessSlider, this.reflectionThicknessValue, 'reflectionThickness', 0, 'px');
+        this.setupSlider(this.reflectionOffsetSlider, this.reflectionOffsetValue, 'reflectionOffset', 0, 'px');
+        this.setupSlider(this.reflectionOpacitySlider, this.reflectionOpacityValue, 'reflectionOpacity', 0, '%');
+        this.setupSlider(this.reflectionArcPositionOffsetSlider, this.reflectionArcPositionOffsetValue, 'reflectionArcPositionOffset', 0, '°');
         
         // Image upload listener
         if (this.imageUpload) {
@@ -167,6 +204,40 @@ export class UIControls {
                 this.chromaticAberrationSlider.disabled = true;
             }
         }
+    }
+
+    updateReflectionControlsVisibility() {
+        const controlGroups = [
+            this.reflectionArcDegreesControlGroup,
+            this.reflectionThicknessControlGroup,
+            this.reflectionOffsetControlGroup,
+            this.reflectionOpacityControlGroup,
+            this.reflectionArcPositionOffsetControlGroup
+        ];
+        
+        const sliders = [
+            this.reflectionArcDegreesSlider,
+            this.reflectionThicknessSlider,
+            this.reflectionOffsetSlider,
+            this.reflectionOpacitySlider,
+            this.reflectionArcPositionOffsetSlider
+        ];
+        
+        controlGroups.forEach((group, index) => {
+            if (group && sliders[index]) {
+                if (this.liquidGlassParams.enableReflection) {
+                    group.style.maxHeight = '100px';
+                    group.style.opacity = '1';
+                    group.style.pointerEvents = 'auto';
+                    sliders[index].disabled = false;
+                } else {
+                    group.style.maxHeight = '0';
+                    group.style.opacity = '0';
+                    group.style.pointerEvents = 'none';
+                    sliders[index].disabled = true;
+                }
+            }
+        });
     }
 
     initializeTabs() {

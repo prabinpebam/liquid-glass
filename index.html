@@ -113,6 +113,36 @@
                 <label for="bottomGlowOpacitySlider">Opacity: <span id="bottomGlowOpacityValue"></span></label>
                 <input type="range" id="bottomGlowOpacitySlider" min="0" max="1" step="0.01" value="0.3">
             </div>
+
+            <hr class="separator">
+            <h4>Reflections</h4>
+            <div class="control-group toggle-control-group">
+                <label for="reflectionToggle">Enable:</label>
+                <label class="toggle-switch">
+                    <input type="checkbox" id="reflectionToggle"> 
+                    <span class="toggle-slider"></span>
+                </label>
+            </div>
+            <div class="control-group" id="reflectionArcDegreesControlGroup">
+                <label for="reflectionArcDegreesSlider">Arc Degrees: <span id="reflectionArcDegreesValue"></span>°</label>
+                <input type="range" id="reflectionArcDegreesSlider" min="0" max="180" step="1" value="120">
+            </div>
+            <div class="control-group" id="reflectionThicknessControlGroup">
+                <label for="reflectionThicknessSlider">Thickness: <span id="reflectionThicknessValue"></span>px</label>
+                <input type="range" id="reflectionThicknessSlider" min="5" max="50" step="1" value="20">
+            </div>
+            <div class="control-group" id="reflectionOffsetControlGroup">
+                <label for="reflectionOffsetSlider">Offset: <span id="reflectionOffsetValue"></span>px</label>
+                <input type="range" id="reflectionOffsetSlider" min="0" max="30" step="1" value="5">
+            </div>
+            <div class="control-group" id="reflectionOpacityControlGroup">
+                <label for="reflectionOpacitySlider">Opacity: <span id="reflectionOpacityValue"></span>%</label>
+                <input type="range" id="reflectionOpacitySlider" min="0" max="100" step="1" value="40">
+            </div>
+            <div class="control-group" id="reflectionArcPositionOffsetControlGroup">
+                <label for="reflectionArcPositionOffsetSlider">Arc Position Offset: <span id="reflectionArcPositionOffsetValue"></span>°</label>
+                <input type="range" id="reflectionArcPositionOffsetSlider" min="0" max="180" step="1" value="0">
+            </div>
         </div>
         <!-- Removed the <hr class="separator"> that was between Frostiness and Top Shadow -->
     </div>

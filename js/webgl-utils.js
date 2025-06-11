@@ -59,6 +59,14 @@ export function getUniformLocations(gl, program) {
         enableChromaticAberration: gl.getUniformLocation(program, "u_enableChromaticAberration"),
         chromaticAberrationAmount: gl.getUniformLocation(program, "u_chromaticAberrationAmount"),
 
+        // Reflection
+        enableReflection: gl.getUniformLocation(program, "u_enableReflection"),
+        reflectionArcDegrees: gl.getUniformLocation(program, "u_reflectionArcDegrees"),
+        reflectionThickness: gl.getUniformLocation(program, "u_reflectionThickness"),
+        reflectionOffset: gl.getUniformLocation(program, "u_reflectionOffset"),
+        reflectionOpacity: gl.getUniformLocation(program, "u_reflectionOpacity"),
+        reflectionArcPositionOffset: gl.getUniformLocation(program, "u_reflectionArcPositionOffset"),
+
         // Background rendering
         gridLineColor: gl.getUniformLocation(program, "u_gridLineColor"),
         gridSpacing: gl.getUniformLocation(program, "u_gridSpacing"),

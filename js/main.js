@@ -41,7 +41,15 @@ class LiquidGlassApp {
 
             // Chromatic Aberration
             enableChromaticAberration: false, // New toggle state
-            chromaticAberrationAmount: 0.0 
+            chromaticAberrationAmount: 0.0,
+
+            // Reflection
+            enableReflection: false,
+            reflectionArcDegrees: 120.0, // Changed from 60.0 to 120.0
+            reflectionThickness: 20.0, // New parameter for reflection thickness
+            reflectionOpacity: 40.0, // 0-100%
+            reflectionArcPositionOffset: 0.0, // 0-180 degrees
+            reflectionOffset: 5.0 // New parameter for positioning reflection inside shape (px)
         };
         
         this.backgroundImagesData = [];
@@ -403,6 +411,14 @@ class LiquidGlassApp {
         // Chromatic Aberration
         gl.uniform1i(u.enableChromaticAberration, this.liquidGlassParams.enableChromaticAberration);
         gl.uniform1f(u.chromaticAberrationAmount, this.liquidGlassParams.chromaticAberrationAmount);
+
+        // Reflection
+        gl.uniform1i(u.enableReflection, this.liquidGlassParams.enableReflection);
+        gl.uniform1f(u.reflectionArcDegrees, this.liquidGlassParams.reflectionArcDegrees);
+        gl.uniform1f(u.reflectionThickness, this.liquidGlassParams.reflectionThickness);
+        gl.uniform1f(u.reflectionOffset, this.liquidGlassParams.reflectionOffset);
+        gl.uniform1f(u.reflectionOpacity, this.liquidGlassParams.reflectionOpacity);
+        gl.uniform1f(u.reflectionArcPositionOffset, this.liquidGlassParams.reflectionArcPositionOffset);
     }
 }
 
