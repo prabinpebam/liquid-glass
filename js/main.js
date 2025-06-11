@@ -25,7 +25,19 @@ class LiquidGlassApp {
             gridSpacing: 25.0,
             glassBaseColor: [250/255, 250/255, 255/255, 0.1],
             frostiness: 1.0,
-            showGrid: false // Changed from true to false - grid off by default
+            showGrid: false, // Changed from true to false - grid off by default
+            
+            // Top Shadow Defaults
+            topShadowBlur: 30.0,
+            topShadowOffsetX: 0.0,
+            topShadowOffsetY: 15.0,
+            topShadowOpacity: 0.5, // Default opacity
+
+            // Bottom Glow Defaults
+            bottomGlowBlur: 30.0,
+            bottomGlowOffsetX: 0.0,
+            bottomGlowOffsetY: -15.0,
+            bottomGlowOpacity: 0.3 // Default opacity
         };
         
         this.backgroundImagesData = [];
@@ -339,6 +351,17 @@ class LiquidGlassApp {
         const maxThickness = characteristicDimension - 5;
         const validatedThickness = Math.min(this.liquidGlassParams.edgeDistortionThickness, Math.max(0, maxThickness));
         gl.uniform1f(u.edgeDistortionThickness, validatedThickness);
+
+        // Inner Shadow & Glow Uniforms
+        gl.uniform1f(u.topShadowBlur, this.liquidGlassParams.topShadowBlur);
+        gl.uniform1f(u.topShadowOffsetX, this.liquidGlassParams.topShadowOffsetX);
+        gl.uniform1f(u.topShadowOffsetY, this.liquidGlassParams.topShadowOffsetY);
+        gl.uniform1f(u.topShadowOpacity, this.liquidGlassParams.topShadowOpacity);
+
+        gl.uniform1f(u.bottomGlowBlur, this.liquidGlassParams.bottomGlowBlur);
+        gl.uniform1f(u.bottomGlowOffsetX, this.liquidGlassParams.bottomGlowOffsetX);
+        gl.uniform1f(u.bottomGlowOffsetY, this.liquidGlassParams.bottomGlowOffsetY);
+        gl.uniform1f(u.bottomGlowOpacity, this.liquidGlassParams.bottomGlowOpacity);
     }
 }
 

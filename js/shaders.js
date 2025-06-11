@@ -33,6 +33,17 @@ export const fragmentShaderSource = `
     uniform vec4 u_glassBaseColor;
     uniform float u_frostiness;
 
+    // Inner Shadow & Glow Uniforms for Main Shape
+    uniform float u_topShadowBlur;
+    uniform float u_topShadowOffsetX;
+    uniform float u_topShadowOffsetY;
+    uniform float u_topShadowOpacity;
+
+    uniform float u_bottomGlowBlur;
+    uniform float u_bottomGlowOffsetX;
+    uniform float u_bottomGlowOffsetY;
+    uniform float u_bottomGlowOpacity;
+
     // Background image system
     uniform bool u_hasBackgroundImages;
     uniform sampler2D u_backgroundImageTextures[8];
@@ -66,6 +77,34 @@ export const fragmentShaderSource = `
         vec2 q = abs(p) - b + r;
         return min(max(q.x,q.y),0.0) + length(max(q,0.0)) - r;
     }
+
+    /**
+     * Calculates inner shadow or glow intensity using SDF.
+     * p: current pixel's coordinates relative to the shape's center.
+     * shapeSize: half-extents of the shape (width/2, height/2).
+     * shapeCornerRadius: corner radius of the shape.
+     * offsetX, offsetY: desired offset of the shadow/glow.
+     * blur: blurriness factor for the shadow/glow edge.
+     * Returns an intensity value (0.0 to 1.0), where 1.0 is full shadow/glow.
+     */
+    float getInnerShadowIntensity(vec2 p, vec2 shapeSize, float shapeCornerRadius, float offsetX, float offsetY, float blur) {
+        // To create an inner shadow, we shift the query point *against* the shadow offset.
+        // Imagine the light source is offset; the shadow is cast on the inside of the shape
+        // opposite to this offset light.
+        vec2 queryPoint = p + vec2(offsetX, offsetY);
+
+        // Calculate the signed distance from this queryPoint to the original shape's boundary.
+        // If queryPoint is outside the shape, sdfVal will be positive.
+        // This positive distance indicates that the original point 'p' is in an area
+        // that would be "shadowed" by the shape's edge from the offset light source.
+        float sdfVal = sdRoundedBox(queryPoint, shapeSize, shapeCornerRadius);
+
+        // Use smoothstep to create a soft transition for the shadow based on the distance.
+        // The shadow intensity increases as queryPoint moves further outside the shape (sdfVal increases).
+        // 'blur' controls the width of this transition.
+        return smoothstep(0.0, blur, sdfVal);
+    }
+
 
     /**
      * Renders the background with grid, images, and base color
@@ -341,9 +380,39 @@ export const fragmentShaderSource = `
 
             // Add subtle edge glow for main liquid glass
             if (isInDistortingEdge) {
-                float edgeGlow = smoothstep(0.85, 1.0, edgeDistortionAmount) * 0.15;
+                float edgeGlow = smoothstep(0.85, 1.0, edgeDistortionAmount) * 0.15; // Original edge glow
                 finalColor.rgb += vec3(edgeGlow);
             }
+
+            // Apply Inner Shadows / Glows only to main liquid glass
+            if (u_topShadowOpacity > 0.0 && u_topShadowBlur > 0.0) {
+                float topShadowIntensity = getInnerShadowIntensity(
+                    relativeToLiquidGlassCenter, 
+                    u_rectangleSize * 0.5, 
+                    cornerRadius, 
+                    u_topShadowOffsetX, 
+                    u_topShadowOffsetY, 
+                    u_topShadowBlur
+                );
+                // Shadow darkens, so subtract. Color is black (0,0,0).
+                finalColor.rgb -= topShadowIntensity * u_topShadowOpacity * finalColor.a; // Modulate by glass alpha
+            }
+
+            if (u_bottomGlowOpacity > 0.0 && u_bottomGlowBlur > 0.0) {
+                float bottomGlowIntensity = getInnerShadowIntensity(
+                    relativeToLiquidGlassCenter, 
+                    u_rectangleSize * 0.5, 
+                    cornerRadius, 
+                    u_bottomGlowOffsetX, 
+                    u_bottomGlowOffsetY, 
+                    u_bottomGlowBlur
+                );
+                // Glow lightens, so add. Color is white (1,1,1).
+                finalColor.rgb += vec3(1.0) * bottomGlowIntensity * u_bottomGlowOpacity * finalColor.a; // Modulate by glass alpha
+            }
+            finalColor.rgb = clamp(finalColor.rgb, 0.0, 1.0);
+
+
         }
         gl_FragColor = finalColor;
     }

@@ -56,6 +56,16 @@ The right-side control panel allows you to adjust:
 - **Refraction Strength**: Intensity of the glass distortion effect
 - **Glass Alpha**: Transparency of the glass tint
 - **Frostiness**: Amount of blur/frosting effect
+- **Top Shadow**:
+    - **Blur**: Blur radius of the top inner shadow.
+    - **X Offset**: Horizontal offset of the top inner shadow.
+    - **Y Offset**: Vertical offset of the top inner shadow.
+    - **Opacity**: Opacity of the top inner shadow.
+- **Bottom Glow**:
+    - **Blur**: Blur radius of the bottom inner glow.
+    - **X Offset**: Horizontal offset of the bottom inner glow.
+    - **Y Offset**: Vertical offset of the bottom inner glow.
+    - **Opacity**: Opacity of the bottom inner glow.
 
 ### Image Management
 

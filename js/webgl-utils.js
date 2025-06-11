@@ -42,6 +42,18 @@ export function getUniformLocations(gl, program) {
         refractionStrength: gl.getUniformLocation(program, "u_refractionStrength"),
         glassBaseColor: gl.getUniformLocation(program, "u_glassBaseColor"),
         frostiness: gl.getUniformLocation(program, "u_frostiness"),
+
+        // Inner Shadow: Top
+        topShadowBlur: gl.getUniformLocation(program, "u_topShadowBlur"),
+        topShadowOffsetX: gl.getUniformLocation(program, "u_topShadowOffsetX"),
+        topShadowOffsetY: gl.getUniformLocation(program, "u_topShadowOffsetY"),
+        topShadowOpacity: gl.getUniformLocation(program, "u_topShadowOpacity"),
+
+        // Inner Shadow: Bottom Glow
+        bottomGlowBlur: gl.getUniformLocation(program, "u_bottomGlowBlur"),
+        bottomGlowOffsetX: gl.getUniformLocation(program, "u_bottomGlowOffsetX"),
+        bottomGlowOffsetY: gl.getUniformLocation(program, "u_bottomGlowOffsetY"),
+        bottomGlowOpacity: gl.getUniformLocation(program, "u_bottomGlowOpacity"),
         
         // Background rendering
         gridLineColor: gl.getUniformLocation(program, "u_gridLineColor"),
