@@ -122,13 +122,15 @@ class LiquidGlassApp {
                 this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
 
                 const aspectRatio = img.width / img.height;
-                const width = 500;
-                const height = width / aspectRatio;
+                // Calculate size based on 80% of current canvas height
+                const targetHeight = this.canvas.height * 0.8;
+                const targetWidth = targetHeight * aspectRatio;
 
                 imageData[index] = {
                     texture: texture,
                     aspectRatio: aspectRatio,
-                    size: { x: width, y: height }
+                    size: { x: targetWidth, y: targetHeight },
+                    isDefault: true // Mark as a default image
                 };
 
                 loadedCount++;
@@ -155,7 +157,8 @@ class LiquidGlassApp {
                 texture: imgData.texture,
                 aspectRatio: imgData.aspectRatio,
                 position: { x: currentX, y: y },
-                size: { x: imgData.size.x, y: imgData.size.y }
+                size: { x: imgData.size.x, y: imgData.size.y },
+                isDefault: true // Ensure this flag is carried over
             };
             
             this.backgroundImagesData.push(backgroundImageData);
@@ -226,18 +229,29 @@ class LiquidGlassApp {
         this.positions.gridControlsPosition.x = this.positions.addImageButtonPosition.x + this.positions.addImageButtonSize.x * 0.5 + gapBetweenElements + this.positions.gridControlsSize.x * 0.5;
         this.positions.gridControlsPosition.y = this.positions.addImageButtonPosition.y;
         
-        // Re-center default images if they exist
-        if (this.backgroundImagesData.length >= 2) {
+        // Re-calculate size and position for default images
+        const defaultImages = this.backgroundImagesData.filter(img => img.isDefault);
+        if (defaultImages.length > 0) {
             const spacing = 50;
-            const totalWidth = this.backgroundImagesData[0].size.x + this.backgroundImagesData[1].size.x + spacing;
+            let totalWidth = 0;
+
+            defaultImages.forEach(img => {
+                // Recalculate size based on new canvas height
+                img.size.y = this.canvas.height * 0.8;
+                img.size.x = img.size.y * img.aspectRatio;
+                totalWidth += img.size.x;
+            });
+            
+            if (defaultImages.length > 1) {
+                totalWidth += spacing * (defaultImages.length - 1);
+            }
+
             let currentX = (this.canvas.width - totalWidth) / 2;
             
-            this.backgroundImagesData.forEach((img, index) => {
-                if (index < 2) { // Only reposition the first two default images
-                    img.position.x = currentX;
-                    img.position.y = (this.canvas.height - img.size.y) / 2;
-                    currentX += img.size.x + spacing;
-                }
+            defaultImages.forEach((img) => {
+                img.position.x = currentX;
+                img.position.y = (this.canvas.height - img.size.y) / 2; // Center vertically
+                currentX += img.size.x + spacing;
             });
         }
         
