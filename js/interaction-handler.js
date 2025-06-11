@@ -261,8 +261,9 @@ export class InteractionHandler {
         
         // Check if clicking on add image button
         if (this.isPointInsideAddImageButton(mousePos.x, mousePos.y)) {
-            if (this.uiElements.backgroundImageUpload) {
-                this.uiElements.backgroundImageUpload.click();
+            if (this.uiElements.imageUpload || this.uiElements.backgroundImageUpload) {
+                const imageUpload = this.uiElements.imageUpload || this.uiElements.backgroundImageUpload;
+                imageUpload.click();
             }
             return;
         }

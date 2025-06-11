@@ -648,7 +648,10 @@ export class UIControls {
             controlPanel: this.controlPanel,
             addImageIcon: this.addImageIcon,
             gridIcon: this.gridIcon,
-            imageUpload: this.imageUpload
+            imageUpload: this.imageUpload,
+            backgroundImageUpload: this.imageUpload, // Add this mapping for compatibility
+            gridToggle: this.gridToggle,
+            gridSpacingSlider: this.gridSpacingSlider
         };
     }
 
