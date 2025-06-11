@@ -7,140 +7,216 @@ export class UIControls {
         this.liquidGlassParams = liquidGlassParams;
         this.backgroundImagesData = backgroundImagesData;
         this.renderCallback = renderCallback;
+        this.gl = null; // To be set by setGL
+
+        // Main Glass Shape Controls
+        this.rectWidthSlider = document.getElementById('rectWidthSlider');
+        this.rectWidthValue = document.getElementById('rectWidthValue');
+        this.rectHeightSlider = document.getElementById('rectHeightSlider');
+        this.rectHeightValue = document.getElementById('rectHeightValue');
+        this.rectCornerRadiusSlider = document.getElementById('rectCornerRadiusSlider');
+        this.rectCornerRadiusValue = document.getElementById('rectCornerRadiusValue');
+        this.innerRadiusFactorSlider = document.getElementById('innerRadiusFactorSlider');
+        this.innerRadiusFactorValue = document.getElementById('innerRadiusFactorValue');
+        this.refractionStrengthSlider = document.getElementById('refractionStrengthSlider');
+        this.refractionStrengthValue = document.getElementById('refractionStrengthValue');
+        this.glassAlphaSlider = document.getElementById('glassAlphaSlider');
+        this.glassAlphaValue = document.getElementById('glassAlphaValue');
+        this.frostinessSlider = document.getElementById('frostinessSlider');
+        this.frostinessValue = document.getElementById('frostinessValue');
         
-        this.uiElements = {
-            rectangleWidthControl: { slider: document.getElementById('rectWidthSlider'), valueDisplay: document.getElementById('rectWidthValue') },
-            rectangleHeightControl: { slider: document.getElementById('rectHeightSlider'), valueDisplay: document.getElementById('rectHeightValue') },
-            rectangleCornerRadiusControl: { slider: document.getElementById('rectCornerRadiusSlider'), valueDisplay: document.getElementById('rectCornerRadiusValue') },
-            edgeDistortionThicknessControl: { slider: document.getElementById('innerRadiusFactorSlider'), valueDisplay: document.getElementById('innerRadiusFactorValue') },
-            refractionStrengthControl: { slider: document.getElementById('refractionStrengthSlider'), valueDisplay: document.getElementById('refractionStrengthValue') },
-            glassAlphaControl: { slider: document.getElementById('glassAlphaSlider'), valueDisplay: document.getElementById('glassAlphaValue') },
-            frostinessControl: { slider: document.getElementById('frostinessSlider'), valueDisplay: document.getElementById('frostinessValue') },
-            gridToggle: document.getElementById('gridToggle'),
-            gridSpacingSlider: document.getElementById('gridSpacingSlider'),
-            backgroundImageUpload: document.getElementById('imageUpload'),
-            controlPanel: document.getElementById('controls-pane'),
-            controlPanelTitle: document.getElementById('controls-title'),
-            gridControlsPanel: document.getElementById('grid-controls-panel'),
-            addImageIcon: document.getElementById('add-image-icon'),
-            gridIcon: document.getElementById('grid-icon')
-        };
+        // Grid Controls
+        this.gridToggle = document.getElementById('gridToggle');
+        this.gridSpacingSlider = document.getElementById('gridSpacingSlider');
+        // Note: gridSpacingSlider from index.html doesn't have a separate value display span in the provided HTML
+
+        // Top Shadow Controls
+        this.topShadowBlurSlider = document.getElementById('topShadowBlurSlider');
+        this.topShadowBlurValue = document.getElementById('topShadowBlurValue');
+        this.topShadowOffsetXSlider = document.getElementById('topShadowOffsetXSlider');
+        this.topShadowOffsetXValue = document.getElementById('topShadowOffsetXValue');
+        this.topShadowOffsetYSlider = document.getElementById('topShadowOffsetYSlider');
+        this.topShadowOffsetYValue = document.getElementById('topShadowOffsetYValue');
+        this.topShadowOpacitySlider = document.getElementById('topShadowOpacitySlider');
+        this.topShadowOpacityValue = document.getElementById('topShadowOpacityValue');
+
+        // Bottom Glow Controls
+        this.bottomGlowBlurSlider = document.getElementById('bottomGlowBlurSlider');
+        this.bottomGlowBlurValue = document.getElementById('bottomGlowBlurValue');
+        this.bottomGlowOffsetXSlider = document.getElementById('bottomGlowOffsetXSlider');
+        this.bottomGlowOffsetXValue = document.getElementById('bottomGlowOffsetXValue');
+        this.bottomGlowOffsetYSlider = document.getElementById('bottomGlowOffsetYSlider');
+        this.bottomGlowOffsetYValue = document.getElementById('bottomGlowOffsetYValue');
+        this.bottomGlowOpacitySlider = document.getElementById('bottomGlowOpacitySlider');
+        this.bottomGlowOpacityValue = document.getElementById('bottomGlowOpacityValue');
+
+        // UI Elements for interaction handler / other functionalities
+        this.controlPanel = document.getElementById('controls-pane');
+        this.addImageIcon = document.getElementById('add-image-icon');
+        this.gridIcon = document.getElementById('grid-icon');
+        this.imageUpload = document.getElementById('imageUpload');
     }
 
-    initialize() {
-        this.initializeParameterControls();
-        this.initializeSpecialControls();
-        this.initializeImageUpload();
-    }
-
-    initializeParameterControls() {
-        const parameterMappings = [
-            { key: 'rectangleWidth', paramName: 'rectangleWidth' },
-            { key: 'rectangleHeight', paramName: 'rectangleHeight' },
-            { key: 'rectangleCornerRadius', paramName: 'rectangleCornerRadius' },
-            { key: 'edgeDistortionThickness', paramName: 'edgeDistortionThickness' },
-            { key: 'refractionStrength', paramName: 'refractionStrength' },
-            { key: 'frostiness', paramName: 'frostiness' }
-        ];
-
-        parameterMappings.forEach(mapping => {
-            const controlKey = mapping.key + 'Control';
-            if (!this.uiElements[controlKey] || !this.uiElements[controlKey].slider) {
-                console.warn(`Control not found: ${controlKey}`);
-                return;
-            }
-
-            this.uiElements[controlKey].slider.value = this.liquidGlassParams[mapping.paramName];
-            this.uiElements[controlKey].valueDisplay.textContent = this.liquidGlassParams[mapping.paramName];
-            this.uiElements[controlKey].slider.addEventListener('input', (e) => {
-                this.liquidGlassParams[mapping.paramName] = parseFloat(e.target.value);
-                this.uiElements[controlKey].valueDisplay.textContent = this.liquidGlassParams[mapping.paramName];
-                this.renderCallback();
-            });
-        });
-    }
-
-    initializeSpecialControls() {
-        // Glass alpha control
-        if (this.uiElements.glassAlphaControl && this.uiElements.glassAlphaControl.slider) {
-            this.uiElements.glassAlphaControl.slider.value = this.liquidGlassParams.glassBaseColor[3];
-            this.uiElements.glassAlphaControl.valueDisplay.textContent = this.liquidGlassParams.glassBaseColor[3].toFixed(2);
-            this.uiElements.glassAlphaControl.slider.addEventListener('input', (e) => {
-                this.liquidGlassParams.glassBaseColor[3] = parseFloat(e.target.value);
-                this.uiElements.glassAlphaControl.valueDisplay.textContent = this.liquidGlassParams.glassBaseColor[3].toFixed(2);
-                this.renderCallback();
-            });
-        }
-
-        // Grid toggle
-        if (this.uiElements.gridToggle) {
-            this.uiElements.gridToggle.checked = this.liquidGlassParams.showGrid;
-            this.uiElements.gridToggle.addEventListener('change', (e) => {
-                this.liquidGlassParams.showGrid = e.target.checked;
-                this.renderCallback();
-            });
-        }
-
-        // Grid spacing slider
-        if (this.uiElements.gridSpacingSlider) {
-            this.uiElements.gridSpacingSlider.value = this.liquidGlassParams.gridSpacing;
-            this.uiElements.gridSpacingSlider.addEventListener('input', (e) => {
-                this.liquidGlassParams.gridSpacing = parseFloat(e.target.value);
-                this.renderCallback();
-            });
-        }
-    }
-
-    initializeImageUpload() {
-        if (this.uiElements.backgroundImageUpload) {
-            this.uiElements.backgroundImageUpload.addEventListener('change', (event) => {
-                this.handleBackgroundImageUpload(event);
-            });
-        }
-    }
-
-    handleBackgroundImageUpload(event) {
-        const file = event.target.files[0];
-        if (!file || this.backgroundImagesData.length >= 8) return;
-
-        const img = new Image();
-        img.onload = () => {
-            // Create WebGL texture
-            const gl = this.getGL(); // Need to access GL context from main app
-            const texture = gl.createTexture();
-            gl.bindTexture(gl.TEXTURE_2D, texture);
-            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-
-            const aspectRatio = img.width / img.height;
-            const backgroundImageData = {
-                texture: texture,
-                aspectRatio: aspectRatio, // Store aspect ratio for constrained resizing
-                position: { x: 100 + this.backgroundImagesData.length * 50, y: 100 + this.backgroundImagesData.length * 50 },
-                size: { x: 300, y: 300 / aspectRatio }
-            };
-            
-            this.backgroundImagesData.push(backgroundImageData);
-            this.renderCallback();
-        };
-        img.src = URL.createObjectURL(file);
-        
-        event.target.value = '';
-    }
-
-    // Method to be called from main app to provide GL context
     setGL(gl) {
         this.gl = gl;
     }
 
-    getGL() {
-        return this.gl;
+    initialize() {
+        console.log("UIControls initializing...");
+
+        // Main Glass Shape Sliders
+        this.setupSlider(this.rectWidthSlider, this.rectWidthValue, 'rectangleWidth', 0, 'px');
+        this.setupSlider(this.rectHeightSlider, this.rectHeightValue, 'rectangleHeight', 0, 'px');
+        this.setupSlider(this.rectCornerRadiusSlider, this.rectCornerRadiusValue, 'rectangleCornerRadius', 0, 'px');
+        this.setupSlider(this.innerRadiusFactorSlider, this.innerRadiusFactorValue, 'edgeDistortionThickness', 0, 'px');
+        this.setupSlider(this.refractionStrengthSlider, this.refractionStrengthValue, 'refractionStrength', 1);
+        // Special handler for glassAlphaSlider as it updates an array element
+        this.setupSlider(this.glassAlphaSlider, this.glassAlphaValue, 'glassBaseColorAlpha', 2, '', 
+            (value) => { this.liquidGlassParams.glassBaseColor[3] = parseFloat(value); },
+            () => this.liquidGlassParams.glassBaseColor[3]
+        );
+        this.setupSlider(this.frostinessSlider, this.frostinessValue, 'frostiness', 1);
+        
+        // Grid Controls
+        if (this.gridToggle) {
+            this.gridToggle.checked = this.liquidGlassParams.showGrid;
+            this.gridToggle.addEventListener('change', (e) => {
+                this.liquidGlassParams.showGrid = e.target.checked;
+                console.log(`Checkbox changed: showGrid, New value: ${this.liquidGlassParams.showGrid}`);
+                this.renderCallback();
+            });
+        } else {
+            console.warn("gridToggle element not found.");
+        }
+
+        if (this.gridSpacingSlider) {
+            this.gridSpacingSlider.value = this.liquidGlassParams.gridSpacing;
+            this.gridSpacingSlider.addEventListener('input', (e) => {
+                this.liquidGlassParams.gridSpacing = parseFloat(e.target.value);
+                console.log(`Slider changed: gridSpacing, New value: ${this.liquidGlassParams.gridSpacing}`);
+                // No dedicated value span for grid spacing in HTML, so no update here
+                this.renderCallback();
+            });
+        } else {
+            console.warn("gridSpacingSlider element not found.");
+        }
+
+        // Top Shadow Sliders
+        this.setupSlider(this.topShadowBlurSlider, this.topShadowBlurValue, 'topShadowBlur', 0, 'px');
+        this.setupSlider(this.topShadowOffsetXSlider, this.topShadowOffsetXValue, 'topShadowOffsetX', 0, 'px');
+        this.setupSlider(this.topShadowOffsetYSlider, this.topShadowOffsetYValue, 'topShadowOffsetY', 0, 'px');
+        this.setupSlider(this.topShadowOpacitySlider, this.topShadowOpacityValue, 'topShadowOpacity', 2);
+
+        // Bottom Glow Sliders
+        this.setupSlider(this.bottomGlowBlurSlider, this.bottomGlowBlurValue, 'bottomGlowBlur', 0, 'px');
+        this.setupSlider(this.bottomGlowOffsetXSlider, this.bottomGlowOffsetXValue, 'bottomGlowOffsetX', 0, 'px');
+        this.setupSlider(this.bottomGlowOffsetYSlider, this.bottomGlowOffsetYValue, 'bottomGlowOffsetY', 0, 'px');
+        this.setupSlider(this.bottomGlowOpacitySlider, this.bottomGlowOpacityValue, 'bottomGlowOpacity', 2);
+        
+        // Image upload listener
+        if (this.imageUpload) {
+            if (!this.imageUpload.listenerAdded) { // Prevent multiple listeners if initialize is called more than once
+                this.imageUpload.addEventListener('change', (event) => this.handleImageUpload(event));
+                this.imageUpload.listenerAdded = true;
+            }
+        } else {
+            console.warn("imageUpload element not found.");
+        }
+        console.log("UIControls initialization complete.");
+    }
+
+    setupSlider(sliderElement, valueElement, paramNameOrKey, precision, unit = '', customSetter, customGetter) {
+        if (!sliderElement) {
+            console.warn(`Slider element for '${paramNameOrKey}' not found.`);
+            return;
+        }
+
+        // Use customGetter if provided, otherwise access liquidGlassParams directly
+        const initialValue = customGetter ? customGetter() : this.liquidGlassParams[paramNameOrKey];
+        
+        if (initialValue === undefined && !customGetter) {
+            console.warn(`Parameter '${paramNameOrKey}' not found in liquidGlassParams and no customGetter provided.`);
+            return;
+        }
+        sliderElement.value = initialValue;
+
+        if (valueElement) {
+            valueElement.textContent = parseFloat(initialValue).toFixed(precision) + (unit || '');
+        } else {
+            // Not all sliders have a dedicated value display (e.g., gridSpacingSlider)
+            // console.warn(`Value display element for '${paramNameOrKey}' not found.`);
+        }
+
+        sliderElement.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            let actualValue;
+
+            if (customSetter) {
+                customSetter(value);
+                actualValue = customGetter ? customGetter() : value; // Re-fetch if getter exists
+            } else {
+                this.liquidGlassParams[paramNameOrKey] = value;
+                actualValue = value;
+            }
+            
+            console.log(`Slider changed: ${paramNameOrKey}, New value: ${actualValue}`);
+
+            if (valueElement) {
+                valueElement.textContent = parseFloat(actualValue).toFixed(precision) + (unit || '');
+            }
+            this.renderCallback();
+        });
     }
 
     getUIElements() {
-        return this.uiElements;
+        return {
+            controlPanel: this.controlPanel,
+            addImageIcon: this.addImageIcon,
+            gridIcon: this.gridIcon,
+            imageUpload: this.imageUpload
+        };
+    }
+
+    handleImageUpload(event) {
+        const file = event.target.files[0];
+        if (file && this.gl) {
+            const reader = new FileReader();
+            reader.onload = (e_reader) => {
+                const img = new Image();
+                img.onload = () => {
+                    if (!this.gl) {
+                        console.error("GL context not available for texture creation.");
+                        return;
+                    }
+                    const texture = this.gl.createTexture();
+                    this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+                    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, img);
+                    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
+                    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+                    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
+                    this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+
+                    const aspectRatio = img.width / img.height;
+                    const defaultWidth = 200; 
+                    
+                    if (this.backgroundImagesData.length < 8) { 
+                        this.backgroundImagesData.push({
+                            texture: texture,
+                            aspectRatio: aspectRatio,
+                            position: { x: 50, y: (this.gl.canvas.height - defaultWidth / aspectRatio) / 2 },
+                            size: { x: defaultWidth, y: defaultWidth / aspectRatio }
+                        });
+                        this.renderCallback();
+                    } else {
+                        alert("Maximum number of images (8) reached.");
+                    }
+                };
+                img.src = e_reader.target.result;
+            };
+            reader.readAsDataURL(file);
+            if (event.target) { // Ensure event.target exists before trying to set its value
+                event.target.value = null; 
+            }
+        }
     }
 }
