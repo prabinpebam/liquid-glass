@@ -55,6 +55,10 @@ export class UIControls {
         this.addImageIcon = document.getElementById('add-image-icon');
         this.gridIcon = document.getElementById('grid-icon');
         this.imageUpload = document.getElementById('imageUpload');
+
+        // Tab related elements
+        this.tabPills = document.querySelectorAll('.tab-pill');
+        this.tabPanels = document.querySelectorAll('.tab-panel');
     }
 
     setGL(gl) {
@@ -123,6 +127,41 @@ export class UIControls {
             console.warn("imageUpload element not found.");
         }
         console.log("UIControls initialization complete.");
+        this.initializeTabs(); // Call tab initialization
+    }
+
+    initializeTabs() {
+        this.tabPills.forEach(pill => {
+            pill.addEventListener('click', () => {
+                // Deactivate all pills and panels
+                this.tabPills.forEach(p => p.classList.remove('active'));
+                this.tabPanels.forEach(panel => panel.classList.remove('active'));
+
+                // Activate clicked pill
+                pill.classList.add('active');
+
+                // Activate corresponding panel
+                const targetPanelId = pill.getAttribute('data-tab-target');
+                const targetPanel = document.querySelector(targetPanelId);
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
+                } else {
+                    console.warn(`Tab panel with selector ${targetPanelId} not found.`);
+                }
+            });
+        });
+
+        // Ensure the default active tab is shown (if not already handled by CSS)
+        // This is redundant if CSS already sets the first tab-panel to display: block via .active
+        // but good for robustness if CSS might change.
+        const activePill = document.querySelector('.tab-pill.active');
+        if (activePill) {
+            const activePanelId = activePill.getAttribute('data-tab-target');
+            const activePanel = document.querySelector(activePanelId);
+            if (activePanel) {
+                activePanel.classList.add('active');
+            }
+        }
     }
 
     setupSlider(sliderElement, valueElement, paramNameOrKey, precision, unit = '', customSetter, customGetter) {

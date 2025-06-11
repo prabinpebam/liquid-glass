@@ -49,6 +49,7 @@ class LiquidGlassApp {
         this.positionBuffer = null;
         this.uiControls = null;
         this.interactionHandler = null;
+        this.controlPanelResizeObserver = null; // Add a property to hold the observer
     }
 
     initializePositions() {
@@ -174,6 +175,24 @@ class LiquidGlassApp {
         );
         this.uiControls.setGL(this.gl); // Provide GL context to UI controls
         this.uiControls.initialize();
+
+        // Add ResizeObserver for the control panel
+        const controlPanelElement = this.uiControls.getUIElements().controlPanel;
+        if (controlPanelElement) {
+            this.controlPanelResizeObserver = new ResizeObserver(entries => {
+                // We only observe one element, so we can take the first entry
+                // for (let entry of entries) { // Loop if observing multiple elements
+                //     const { width, height } = entry.contentRect;
+                //     // console.log(`Control panel resized to: ${width} x ${height}`);
+                // }
+                // Call updateElementPositions to re-calculate size and position for WebGL
+                this.updateElementPositions();
+                this.render();
+            });
+            this.controlPanelResizeObserver.observe(controlPanelElement);
+        } else {
+            console.warn("Control panel element not found for ResizeObserver.");
+        }
     }
 
     setupEventHandlers() {
