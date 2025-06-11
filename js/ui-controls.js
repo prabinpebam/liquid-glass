@@ -1,3 +1,5 @@
+import { ConfigManager } from './config-manager.js';
+
 /**
  * UI Controls and Event Handling
  */
@@ -83,6 +85,19 @@ export class UIControls {
         // Tab related elements
         this.tabPills = document.querySelectorAll('.tab-pill');
         this.tabPanels = document.querySelectorAll('.tab-panel');
+
+        // Config management
+        this.configManager = new ConfigManager(liquidGlassParams, this, backgroundImagesData);
+        
+        // Save/Load elements
+        this.saveConfigBtn = document.getElementById('save-config-btn');
+        this.loadConfigBtn = document.getElementById('load-config-btn');
+        this.saveModal = document.getElementById('save-modal');
+        this.configNameInput = document.getElementById('config-name-input');
+        this.saveConfirmBtn = document.getElementById('save-confirm-btn');
+        this.saveCancelBtn = document.getElementById('save-cancel-btn');
+        this.loadDropdown = document.getElementById('load-dropdown');
+        this.configList = document.getElementById('config-list');
     }
 
     setGL(gl) {
@@ -185,6 +200,317 @@ export class UIControls {
         } else {
             console.warn("imageUpload element not found.");
         }
+        this.setupSaveLoadHandlers();
+        console.log("UIControls initialization complete.");
+        this.initializeTabs(); // Call tab initialization
+    }
+
+    setupSaveLoadHandlers() {
+        // Save button
+        if (this.saveConfigBtn) {
+            this.saveConfigBtn.addEventListener('click', () => {
+                this.showSaveModal();
+            });
+        }
+
+        // Load button
+        if (this.loadConfigBtn) {
+            this.loadConfigBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleLoadDropdown();
+            });
+        }
+
+        // Save modal handlers
+        if (this.saveConfirmBtn) {
+            this.saveConfirmBtn.addEventListener('click', () => {
+                this.handleSaveConfig();
+            });
+        }
+
+        if (this.saveCancelBtn) {
+            this.saveCancelBtn.addEventListener('click', () => {
+                this.hideSaveModal();
+            });
+        }
+
+        // Modal background click
+        if (this.saveModal) {
+            this.saveModal.addEventListener('click', (e) => {
+                if (e.target === this.saveModal) {
+                    this.hideSaveModal();
+                }
+            });
+        }
+
+        // Config name input enter key
+        if (this.configNameInput) {
+            this.configNameInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    this.handleSaveConfig();
+                }
+            });
+        }
+
+        // Click outside dropdown to close
+        document.addEventListener('click', (e) => {
+            if (this.loadDropdown && this.loadDropdown.style.display === 'block') {
+                if (!this.loadDropdown.contains(e.target) && !this.loadConfigBtn.contains(e.target)) {
+                    this.hideLoadDropdown();
+                }
+            }
+        });
+    }
+
+    showSaveModal() {
+        if (this.saveModal) {
+            this.saveModal.style.display = 'block';
+            this.configNameInput.value = '';
+            this.configNameInput.focus();
+        }
+    }
+
+    hideSaveModal() {
+        if (this.saveModal) {
+            this.saveModal.style.display = 'none';
+        }
+    }
+
+    handleSaveConfig() {
+        const name = this.configNameInput.value.trim();
+        if (!name) {
+            alert('Please enter a configuration name.');
+            return;
+        }
+
+        this.configManager.saveConfiguration(name);
+        this.hideSaveModal();
+        
+        // Show success message briefly
+        this.showToast(`Configuration "${name}" saved successfully!`);
+    }
+
+    toggleLoadDropdown() {
+        if (this.loadDropdown.style.display === 'block') {
+            this.hideLoadDropdown();
+        } else {
+            this.showLoadDropdown();
+        }
+    }
+
+    showLoadDropdown() {
+        this.populateConfigList();
+        this.loadDropdown.style.display = 'block';
+    }
+
+    hideLoadDropdown() {
+        this.loadDropdown.style.display = 'none';
+    }
+
+    populateConfigList() {
+        const savedConfigs = this.configManager.getSavedConfigurations();
+        const configNames = Object.keys(savedConfigs);
+
+        if (configNames.length === 0) {
+            this.configList.innerHTML = '<div class="no-configs">No saved configurations</div>';
+            return;
+        }
+
+        this.configList.innerHTML = configNames.map(name => {
+            const config = savedConfigs[name];
+            const date = new Date(config.savedAt).toLocaleString();
+            
+            return `
+                <div class="config-item" data-config-name="${name}">
+                    <div class="config-item-content">
+                        <div class="config-name">${name}</div>
+                        <div class="config-date">${date}</div>
+                    </div>
+                    <div class="delete-config" data-config-name="${name}">×</div>
+                </div>
+            `;
+        }).join('');
+
+        // Add event listeners
+        this.configList.querySelectorAll('.config-item').forEach(item => {
+            item.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('delete-config')) {
+                    const configName = item.dataset.configName;
+                    this.loadConfiguration(configName);
+                }
+            });
+        });
+
+        this.configList.querySelectorAll('.delete-config').forEach(deleteBtn => {
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const configName = deleteBtn.dataset.configName;
+                this.deleteConfiguration(configName);
+            });
+        });
+    }
+
+    loadConfiguration(name) {
+        if (this.configManager.loadConfiguration(name)) {
+            this.hideLoadDropdown();
+            this.showToast(`Configuration "${name}" loaded successfully!`);
+        } else {
+            alert(`Failed to load configuration "${name}"`);
+        }
+    }
+
+    deleteConfiguration(name) {
+        if (confirm(`Are you sure you want to delete "${name}"?`)) {
+            if (this.configManager.deleteConfiguration(name)) {
+                this.populateConfigList(); // Refresh the list
+                this.showToast(`Configuration "${name}" deleted.`);
+            }
+        }
+    }
+
+    showToast(message) {
+        // Create a simple toast notification
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = message;
+        toast.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 122, 255, 0.9);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            z-index: 2000;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            opacity: 0;
+            transform: translateY(-20px);
+            transition: all 0.3s ease;
+        `;
+        
+        document.body.appendChild(toast);
+        
+        // Animate in
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateY(0)';
+        });
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(-20px)';
+            setTimeout(() => document.body.removeChild(toast), 300);
+        }, 3000);
+    }
+
+    /**
+     * UI Controls and Event Handling
+     */
+
+    setGL(gl) {
+        this.gl = gl;
+    }
+
+    initialize() {
+        console.log("UIControls initializing...");
+
+        // Main Glass Shape Sliders
+        this.setupSlider(this.rectWidthSlider, this.rectWidthValue, 'rectangleWidth', 0, 'px');
+        this.setupSlider(this.rectHeightSlider, this.rectHeightValue, 'rectangleHeight', 0, 'px');
+        this.setupSlider(this.rectCornerRadiusSlider, this.rectCornerRadiusValue, 'rectangleCornerRadius', 0, 'px');
+        this.setupSlider(this.innerRadiusFactorSlider, this.innerRadiusFactorValue, 'edgeDistortionThickness', 0, 'px');
+        this.setupSlider(this.refractionStrengthSlider, this.refractionStrengthValue, 'refractionStrength', 1);
+        // Special handler for glassAlphaSlider as it updates an array element
+        this.setupSlider(this.glassAlphaSlider, this.glassAlphaValue, 'glassBaseColorAlpha', 2, '', 
+            (value) => { this.liquidGlassParams.glassBaseColor[3] = parseFloat(value); },
+            () => this.liquidGlassParams.glassBaseColor[3]
+        );
+        this.setupSlider(this.frostinessSlider, this.frostinessValue, 'frostiness', 1);
+        
+        // Chromatic Aberration Controls
+        if (this.chromaticAberrationToggle) {
+            this.chromaticAberrationToggle.checked = this.liquidGlassParams.enableChromaticAberration;
+            this.updateChromaticAberrationAmountVisibility(); // Initial visibility state
+            this.chromaticAberrationToggle.addEventListener('change', (e) => {
+                this.liquidGlassParams.enableChromaticAberration = e.target.checked;
+                console.log(`Checkbox changed: enableChromaticAberration, New value: ${this.liquidGlassParams.enableChromaticAberration}`);
+                this.updateChromaticAberrationAmountVisibility();
+                this.renderCallback();
+            });
+        } else {
+            console.warn("chromaticAberrationToggle element not found.");
+        }
+        this.setupSlider(this.chromaticAberrationSlider, this.chromaticAberrationValue, 'chromaticAberrationAmount', 1);
+
+
+        // Grid Controls
+        if (this.gridToggle) {
+            this.gridToggle.checked = this.liquidGlassParams.showGrid;
+            this.gridToggle.addEventListener('change', (e) => {
+                this.liquidGlassParams.showGrid = e.target.checked;
+                console.log(`Checkbox changed: showGrid, New value: ${this.liquidGlassParams.showGrid}`);
+                this.renderCallback();
+            });
+        } else {
+            console.warn("gridToggle element not found.");
+        }
+
+        if (this.gridSpacingSlider) {
+            this.gridSpacingSlider.value = this.liquidGlassParams.gridSpacing;
+            this.gridSpacingSlider.addEventListener('input', (e) => {
+                this.liquidGlassParams.gridSpacing = parseFloat(e.target.value);
+                console.log(`Slider changed: gridSpacing, New value: ${this.liquidGlassParams.gridSpacing}`);
+                // No dedicated value span for grid spacing in HTML, so no update here
+                this.renderCallback();
+            });
+        } else {
+            console.warn("gridSpacingSlider element not found.");
+        }
+
+        // Top Shadow Sliders
+        this.setupSlider(this.topShadowBlurSlider, this.topShadowBlurValue, 'topShadowBlur', 0, 'px');
+        this.setupSlider(this.topShadowOffsetXSlider, this.topShadowOffsetXValue, 'topShadowOffsetX', 0, 'px');
+        this.setupSlider(this.topShadowOffsetYSlider, this.topShadowOffsetYValue, 'topShadowOffsetY', 0, 'px');
+        this.setupSlider(this.topShadowOpacitySlider, this.topShadowOpacityValue, 'topShadowOpacity', 2);
+
+        // Bottom Glow Sliders
+        this.setupSlider(this.bottomGlowBlurSlider, this.bottomGlowBlurValue, 'bottomGlowBlur', 0, 'px');
+        this.setupSlider(this.bottomGlowOffsetXSlider, this.bottomGlowOffsetXValue, 'bottomGlowOffsetX', 0, 'px');
+        this.setupSlider(this.bottomGlowOffsetYSlider, this.bottomGlowOffsetYValue, 'bottomGlowOffsetY', 0, 'px');
+        this.setupSlider(this.bottomGlowOpacitySlider, this.bottomGlowOpacityValue, 'bottomGlowOpacity', 2);
+
+        // Reflection Controls
+        if (this.reflectionToggle) {
+            this.reflectionToggle.checked = this.liquidGlassParams.enableReflection;
+            this.updateReflectionControlsVisibility(); // Initial visibility state
+            this.reflectionToggle.addEventListener('change', (e) => {
+                this.liquidGlassParams.enableReflection = e.target.checked;
+                console.log(`Checkbox changed: enableReflection, New value: ${this.liquidGlassParams.enableReflection}`);
+                this.updateReflectionControlsVisibility();
+                this.renderCallback();
+            });
+        } else {
+            console.warn("reflectionToggle element not found.");
+        }
+        this.setupSlider(this.reflectionArcDegreesSlider, this.reflectionArcDegreesValue, 'reflectionArcDegrees', 0, '°');
+        this.setupSlider(this.reflectionThicknessSlider, this.reflectionThicknessValue, 'reflectionThickness', 0, 'px');
+        this.setupSlider(this.reflectionOffsetSlider, this.reflectionOffsetValue, 'reflectionOffset', 0, 'px');
+        this.setupSlider(this.reflectionOpacitySlider, this.reflectionOpacityValue, 'reflectionOpacity', 0, '%');
+        this.setupSlider(this.reflectionArcPositionOffsetSlider, this.reflectionArcPositionOffsetValue, 'reflectionArcPositionOffset', 0, '°');
+        
+        // Image upload listener
+        if (this.imageUpload) {
+            if (!this.imageUpload.listenerAdded) { // Prevent multiple listeners if initialize is called more than once
+                this.imageUpload.addEventListener('change', (event) => this.handleImageUpload(event));
+                this.imageUpload.listenerAdded = true;
+            }
+        } else {
+            console.warn("imageUpload element not found.");
+        }
+        this.setupSaveLoadHandlers();
         console.log("UIControls initialization complete.");
         this.initializeTabs(); // Call tab initialization
     }

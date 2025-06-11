@@ -70,16 +70,15 @@ body, html {
 }
 
 #controls-title {
-    font-size: 16px;
+    font-size: 16px; /* Reduced font size */
     font-weight: 600;
     margin-top: 0;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
+    margin-bottom: 10px; /* Reduced margin */
+    padding-bottom: 8px; /* Reduced padding */
     text-align: left;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    color: #ddd;
+    justify-content: flex-start; 
 }
 
 #controls-title:active {
@@ -95,52 +94,6 @@ body, html {
     background-position: center;
     opacity: 0.6;
     margin-right: 8px; /* Add space between handle and title text */
-}
-
-.control-buttons {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-
-.frosted-button {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    color: #ccc;
-    font-size: 10px;
-    padding: 4px 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    min-height: 24px;
-}
-
-.frosted-button:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-}
-
-.frosted-button.primary {
-    background: rgba(0, 122, 255, 0.3);
-    border-color: rgba(0, 122, 255, 0.5);
-    color: white;
-}
-
-.frosted-button.primary:hover {
-    background: rgba(0, 122, 255, 0.4);
-    border-color: rgba(0, 122, 255, 0.6);
-}
-
-.button-icon {
-    width: 12px;
-    height: 12px;
-    filter: brightness(0) invert(1);
-    opacity: 0.7;
 }
 
 .tabs-container {
@@ -162,8 +115,6 @@ body, html {
     cursor: pointer;
     transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
     color: #eee; /* Light text color for dark background */
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
 }
 
 .tab-pill:last-child {
@@ -448,7 +399,7 @@ input:checked + .toggle-slider {
     z-index: 15;
     pointer-events: none;
     opacity: 0.8;
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1)) brightness(0) invert(1);
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.1));
 }
 
 #add-image-icon {
@@ -461,183 +412,23 @@ input:checked + .toggle-slider {
     height: 20px;
 }
 
-/* Modal Styles */
-.modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
-}
-
-.modal-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 300px;
-    padding: 20px;
-    border-radius: 12px;
-}
-
-.frosted-panel {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-}
-
-.modal-content h4 {
-    margin: 0 0 15px 0;
-    color: #ddd;
-    font-size: 14px;
-}
-
-#config-name-input {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.1);
-    color: #ddd;
-    font-size: 12px;
-    margin-bottom: 15px;
-    outline: none;
-    box-sizing: border-box;
-}
-
-#config-name-input:focus {
-    border-color: rgba(0, 122, 255, 0.5);
-    background: rgba(255, 255, 255, 0.15);
-}
-
-#config-name-input::placeholder {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-.modal-buttons {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-}
-
-/* Dropdown Styles */
-.dropdown {
-    position: absolute;
-    top: 35px;
-    right: 0;
-    width: 250px;
-    max-height: 300px;
-    overflow-y: auto;
-    border-radius: 8px;
-    z-index: 100;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-}
-
-.dropdown-header {
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #bbb;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.config-list {
-    max-height: 250px;
-    overflow-y: auto;
-}
-
-.config-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 8px 12px;
-    font-size: 11px;
-    color: #ccc;
-    cursor: pointer;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: all 0.2s ease;
-}
-
-.config-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #ddd;
-}
-
-.config-item.selected {
-    background: rgba(0, 122, 255, 0.3);
-    color: white;
-}
-
-.config-item-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.config-name {
-    font-weight: 500;
-}
-
-.config-date {
-    font-size: 9px;
-    opacity: 0.7;
-}
-
-.delete-config {
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    background: rgba(220, 53, 69, 0.2);
-    border: 1px solid rgba(220, 53, 69, 0.4);
-    color: #dc3545;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 10px;
-    opacity: 0;
-    transition: all 0.2s ease;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
-}
-
-.config-item:hover .delete-config {
-    opacity: 1;
-}
-
-.delete-config:hover {
-    background: rgba(220, 53, 69, 0.4);
-    border-color: rgba(220, 53, 69, 0.6);
-    transform: scale(1.1);
-}
-
-.no-configs {
-    padding: 20px;
-    text-align: center;
-    color: rgba(255, 255, 255, 0.5);
-    font-size: 11px;
-}
-
 /* Ensure control group and other elements inside controls-pane have appropriate styling */
+/* if their background was previously relying on the controls-pane background */
 #controls-pane .control-group {
+    /* Example: if text color needs adjustment for better readability against the new transparent background */
+    /* color: #333; */ /* Adjust as needed */
     margin-bottom: 8px; /* Existing or desired margin */
 }
 
 #controls-pane h3,
 #controls-pane label {
+    /* Example: Adjust text color if needed for readability */
+    /* color: #eee; */ /* If the WebGL glass behind is dark - this is now the default */
     color: #ccc; /* Default label color adjusted */
 }
 
 #chromaticAberrationAmountControlGroup {
-    transition: opacity 0.3s ease, max-height 0.3s ease-out, margin-bottom 0.3s ease;
+    transition: opacity 0.3s ease, max-height 0.3s ease-out, margin-bottom 0.3s ease; /* Added margin-bottom */
     overflow: hidden;
     /* margin-bottom will be set by default .control-group style, 
        but we can remove it when hidden if needed */
