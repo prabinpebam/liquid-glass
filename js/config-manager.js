@@ -8,6 +8,8 @@ export class ConfigManager {
         this.uiControls = uiControls;
         this.backgroundImagesData = backgroundImagesData;
         this.storageKey = 'liquidGlassConfigs';
+        this.isAnimating = false;
+        this.animationFrameId = null;
     }
 
     /**
@@ -27,7 +29,7 @@ export class ConfigManager {
     }
 
     /**
-     * Loads configuration from localStorage
+     * Loads configuration from localStorage with smooth animation
      */
     loadConfiguration(name) {
         const savedConfigs = this.getSavedConfigurations();
@@ -38,25 +40,189 @@ export class ConfigManager {
             return false;
         }
 
-        this.applyConfiguration(config);
+        this.animateToConfiguration(config);
         console.log(`Configuration "${name}" loaded successfully`);
         return true;
     }
 
     /**
-     * Deletes a saved configuration
+     * Animates from current values to target configuration values
      */
-    deleteConfiguration(name) {
-        const savedConfigs = this.getSavedConfigurations();
-        
-        if (savedConfigs[name]) {
-            delete savedConfigs[name];
-            localStorage.setItem(this.storageKey, JSON.stringify(savedConfigs));
-            console.log(`Configuration "${name}" deleted successfully`);
-            return true;
+    animateToConfiguration(targetConfig) {
+        if (this.isAnimating) {
+            // Cancel any existing animation
+            if (this.animationFrameId) {
+                cancelAnimationFrame(this.animationFrameId);
+            }
         }
+
+        this.isAnimating = true;
+        const startTime = performance.now();
+        const duration = 1000; // 1 second
+
+        // Capture current values as starting points
+        const startValues = this.extractCurrentConfiguration();
+
+        // Define easing function (ease-in-out cubic)
+        const easeInOutCubic = (t) => {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        };
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const easedProgress = easeInOutCubic(progress);
+
+            // Interpolate all values
+            this.interpolateValues(startValues, targetConfig, easedProgress);
+
+            // Update UI controls to reflect current animated values
+            this.updateUIControlsImmediate();
+
+            // Trigger render
+            if (this.uiControls.renderCallback) {
+                this.uiControls.renderCallback();
+            }
+
+            if (progress < 1) {
+                this.animationFrameId = requestAnimationFrame(animate);
+            } else {
+                // Animation complete
+                this.isAnimating = false;
+                this.animationFrameId = null;
+                
+                // Ensure final values are exactly the target values
+                this.applyConfigurationImmediate(targetConfig);
+                this.updateUIControlsImmediate();
+                
+                if (this.uiControls.renderCallback) {
+                    this.uiControls.renderCallback();
+                }
+            }
+        };
+
+        this.animationFrameId = requestAnimationFrame(animate);
+    }
+
+    /**
+     * Interpolates between start and target values based on progress
+     */
+    interpolateValues(startValues, targetValues, progress) {
+        Object.keys(targetValues).forEach(key => {
+            if (key === 'savedAt') return; // Skip metadata
+            
+            const startValue = startValues[key];
+            const targetValue = targetValues[key];
+
+            if (key === 'glassBaseColor') {
+                // Handle array interpolation
+                for (let i = 0; i < startValue.length; i++) {
+                    this.liquidGlassParams[key][i] = startValue[i] + (targetValue[i] - startValue[i]) * progress;
+                }
+            } else if (typeof startValue === 'number' && typeof targetValue === 'number') {
+                // Interpolate numeric values
+                this.liquidGlassParams[key] = startValue + (targetValue - startValue) * progress;
+            } else if (typeof startValue === 'boolean' && typeof targetValue === 'boolean') {
+                // For boolean values, switch at 50% progress
+                this.liquidGlassParams[key] = progress < 0.5 ? startValue : targetValue;
+            } else {
+                // For other types, just set the target value
+                this.liquidGlassParams[key] = targetValue;
+            }
+        });
+    }
+
+    /**
+     * Applies configuration immediately without animation (for final step)
+     */
+    applyConfigurationImmediate(config) {
+        Object.keys(config).forEach(key => {
+            if (key === 'savedAt') return; // Skip metadata
+            
+            if (key === 'glassBaseColor') {
+                this.liquidGlassParams[key] = [...config[key]];
+            } else {
+                this.liquidGlassParams[key] = config[key];
+            }
+        });
+    }
+
+    /**
+     * Updates UI controls immediately without the standard delay/transition
+     */
+    updateUIControlsImmediate() {
+        const currentConfig = this.extractCurrentConfiguration();
         
-        return false;
+        // Update sliders and their value displays
+        const controlMappings = [
+            { param: 'rectangleWidth', slider: 'rectWidthSlider', value: 'rectWidthValue', unit: 'px' },
+            { param: 'rectangleHeight', slider: 'rectHeightSlider', value: 'rectHeightValue', unit: 'px' },
+            { param: 'rectangleCornerRadius', slider: 'rectCornerRadiusSlider', value: 'rectCornerRadiusValue', unit: 'px' },
+            { param: 'edgeDistortionThickness', slider: 'innerRadiusFactorSlider', value: 'innerRadiusFactorValue', unit: 'px' },
+            { param: 'refractionStrength', slider: 'refractionStrengthSlider', value: 'refractionStrengthValue' },
+            { param: 'frostiness', slider: 'frostinessSlider', value: 'frostinessValue' },
+            { param: 'chromaticAberrationAmount', slider: 'chromaticAberrationSlider', value: 'chromaticAberrationValue' },
+            { param: 'topShadowBlur', slider: 'topShadowBlurSlider', value: 'topShadowBlurValue', unit: 'px' },
+            { param: 'topShadowOffsetX', slider: 'topShadowOffsetXSlider', value: 'topShadowOffsetXValue', unit: 'px' },
+            { param: 'topShadowOffsetY', slider: 'topShadowOffsetYSlider', value: 'topShadowOffsetYValue', unit: 'px' },
+            { param: 'topShadowOpacity', slider: 'topShadowOpacitySlider', value: 'topShadowOpacityValue' },
+            { param: 'bottomGlowBlur', slider: 'bottomGlowBlurSlider', value: 'bottomGlowBlurValue', unit: 'px' },
+            { param: 'bottomGlowOffsetX', slider: 'bottomGlowOffsetXSlider', value: 'bottomGlowOffsetXValue', unit: 'px' },
+            { param: 'bottomGlowOffsetY', slider: 'bottomGlowOffsetYSlider', value: 'bottomGlowOffsetYValue', unit: 'px' },
+            { param: 'bottomGlowOpacity', slider: 'bottomGlowOpacitySlider', value: 'bottomGlowOpacityValue' },
+            { param: 'reflectionArcDegrees', slider: 'reflectionArcDegreesSlider', value: 'reflectionArcDegreesValue', unit: '°' },
+            { param: 'reflectionThickness', slider: 'reflectionThicknessSlider', value: 'reflectionThicknessValue', unit: 'px' },
+            { param: 'reflectionOffset', slider: 'reflectionOffsetSlider', value: 'reflectionOffsetValue', unit: 'px' },
+            { param: 'reflectionOpacity', slider: 'reflectionOpacitySlider', value: 'reflectionOpacityValue', unit: '%' },
+            { param: 'reflectionArcPositionOffset', slider: 'reflectionArcPositionOffsetSlider', value: 'reflectionArcPositionOffsetValue', unit: '°' },
+            { param: 'gridSpacing', slider: 'gridSpacingSlider', value: null }
+        ];
+
+        controlMappings.forEach(mapping => {
+            const sliderElement = this.uiControls[mapping.slider];
+            const valueElement = this.uiControls[mapping.value];
+            const value = currentConfig[mapping.param];
+
+            if (sliderElement && value !== undefined) {
+                sliderElement.value = value;
+                
+                if (valueElement) {
+                    const precision = mapping.param.includes('Opacity') || mapping.param === 'frostiness' ? 2 : 
+                                    mapping.param.includes('Alpha') ? 2 : 0;
+                    valueElement.textContent = parseFloat(value).toFixed(precision) + (mapping.unit || '');
+                }
+            }
+        });
+
+        // Update glass alpha slider (special case)
+        if (currentConfig.glassBaseColor && this.uiControls.glassAlphaSlider) {
+            this.uiControls.glassAlphaSlider.value = currentConfig.glassBaseColor[3];
+            if (this.uiControls.glassAlphaValue) {
+                this.uiControls.glassAlphaValue.textContent = parseFloat(currentConfig.glassBaseColor[3]).toFixed(2);
+            }
+        }
+
+        // Update toggles (these should change immediately, not animate)
+        if (this.uiControls.chromaticAberrationToggle) {
+            this.uiControls.chromaticAberrationToggle.checked = currentConfig.enableChromaticAberration;
+            this.uiControls.updateChromaticAberrationAmountVisibility();
+        }
+
+        if (this.uiControls.reflectionToggle) {
+            this.uiControls.reflectionToggle.checked = currentConfig.enableReflection;
+            this.uiControls.updateReflectionControlsVisibility();
+        }
+
+        if (this.uiControls.gridToggle) {
+            this.uiControls.gridToggle.checked = currentConfig.showGrid;
+        }
+    }
+
+    /**
+     * Original applyConfiguration method (kept for compatibility but now calls animated version)
+     */
+    applyConfiguration(config) {
+        this.animateToConfiguration(config);
     }
 
     /**

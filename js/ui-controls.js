@@ -518,11 +518,10 @@ export class UIControls {
     updateChromaticAberrationAmountVisibility() {
         if (this.chromaticAberrationAmountControlGroup) {
             if (this.liquidGlassParams.enableChromaticAberration) {
-                this.chromaticAberrationAmountControlGroup.style.maxHeight = '100px'; // Or enough to show content
+                this.chromaticAberrationAmountControlGroup.style.maxHeight = '100px';
                 this.chromaticAberrationAmountControlGroup.style.opacity = '1';
                 this.chromaticAberrationAmountControlGroup.style.pointerEvents = 'auto';
                 this.chromaticAberrationSlider.disabled = false;
-
             } else {
                 this.chromaticAberrationAmountControlGroup.style.maxHeight = '0';
                 this.chromaticAberrationAmountControlGroup.style.opacity = '0';
