@@ -15,41 +15,41 @@ class LiquidGlassApp {
         this.gl = gl;
         this.canvas = canvas;
         
-        // Initialize parameters
+        // Initialize parameters with "Thick oval" preset values
         this.liquidGlassParams = {
-            rectangleWidth: 300,
-            rectangleHeight: 200,
-            rectangleCornerRadius: 30,
-            edgeDistortionThickness: 16, // Changed from 30 to 16px
-            refractionStrength: 25.0,
+            rectangleWidth: 333,
+            rectangleHeight: 195,
+            rectangleCornerRadius: 144,
+            edgeDistortionThickness: 29,
+            refractionStrength: 47.0,
             gridSpacing: 25.0,
-            glassBaseColor: [250/255, 250/255, 255/255, 0.1],
+            glassBaseColor: [0.9803921568627451, 0.9803921568627451, 1, 0.1],
             frostiness: 1.0,
-            showGrid: false, // Changed from true to false - grid off by default
+            showGrid: false,
             
-            // Top Shadow Defaults
-            topShadowBlur: 30.0,
-            topShadowOffsetX: 0.0,
-            topShadowOffsetY: 15.0,
-            topShadowOpacity: 0.5, // Default opacity
+            // Top Shadow
+            topShadowBlur: 60.0,
+            topShadowOffsetX: -14.0,
+            topShadowOffsetY: 21.0,
+            topShadowOpacity: 0.5,
 
-            // Bottom Glow Defaults
+            // Bottom Glow
             bottomGlowBlur: 30.0,
-            bottomGlowOffsetX: 0.0,
+            bottomGlowOffsetX: 31.0,
             bottomGlowOffsetY: -15.0,
-            bottomGlowOpacity: 0.3, // Default opacity
+            bottomGlowOpacity: 0.3,
 
             // Chromatic Aberration
-            enableChromaticAberration: false, // New toggle state
-            chromaticAberrationAmount: 0.0,
+            enableChromaticAberration: true,
+            chromaticAberrationAmount: 9.1,
 
             // Reflection
             enableReflection: false,
-            reflectionArcDegrees: 120.0, // Changed from 60.0 to 120.0
-            reflectionThickness: 20.0, // New parameter for reflection thickness
-            reflectionOpacity: 40.0, // 0-100%
-            reflectionArcPositionOffset: 0.0, // 0-180 degrees
-            reflectionOffset: 5.0 // New parameter for positioning reflection inside shape (px)
+            reflectionArcDegrees: 120.0,
+            reflectionThickness: 20.0,
+            reflectionOpacity: 40.0,
+            reflectionArcPositionOffset: 0.0,
+            reflectionOffset: 5.0
         };
         
         this.backgroundImagesData = [];
@@ -404,4 +404,17 @@ if (!gl) {
 } else {
     const app = new LiquidGlassApp();
     app.initialize();
+}
+
+function main() {
+    // Initialize WebGL context and shaders
+    // ...existing initialization code...
+
+    // Initialize UI controls
+    uiControls.initialize();
+    
+    // Initialize configuration system (loads saved state or default preset)
+    uiControls.configManager.initialize();
+
+    // ...existing code...
 }

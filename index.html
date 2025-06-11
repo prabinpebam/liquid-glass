@@ -25,26 +25,6 @@
             </div>
         </h3>
 
-        <!-- Save Configuration Modal -->
-        <div id="save-modal" class="modal">
-            <div class="modal-content frosted-panel">
-                <h4>Save Configuration</h4>
-                <input type="text" id="config-name-input" placeholder="Enter configuration name..." maxlength="50">
-                <div class="modal-buttons">
-                    <button id="save-confirm-btn" class="frosted-button primary">Save</button>
-                    <button id="save-cancel-btn" class="frosted-button">Cancel</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Load Configuration Dropdown -->
-        <div id="load-dropdown" class="dropdown frosted-panel" style="display: none;">
-            <div class="dropdown-header">Saved Configurations</div>
-            <div id="config-list" class="config-list">
-                <!-- Dynamically populated -->
-            </div>
-        </div>
-
         <div class="tabs-container">
             <button class="tab-pill active" data-tab-target="#tab-shape">Shape</button>
             <button class="tab-pill" data-tab-target="#tab-refraction">Refraction</button>
@@ -172,6 +152,26 @@
                 <label for="reflectionArcPositionOffsetSlider">Arc Position Offset: <span id="reflectionArcPositionOffsetValue"></span>°</label>
                 <input type="range" id="reflectionArcPositionOffsetSlider" min="0" max="180" step="1" value="0">
             </div>
+        </div>
+    </div>
+
+    <!-- Save Configuration Modal -->
+    <div id="save-modal" class="modal">
+        <div class="modal-content frosted-panel">
+            <h4>Save Configuration</h4>
+            <input type="text" id="config-name-input" placeholder="Enter configuration name..." maxlength="50">
+            <div class="modal-buttons">
+                <button id="save-confirm-btn" class="frosted-button primary">Save</button>
+                <button id="save-cancel-btn" class="frosted-button">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Configuration Dropdown - Now outside controls pane -->
+    <div id="load-dropdown" class="dropdown frosted-panel" style="display: none;">
+        <div class="dropdown-header">Saved Configurations</div>
+        <div id="config-list" class="config-list">
+            <!-- Dynamically populated -->
         </div>
     </div>
 

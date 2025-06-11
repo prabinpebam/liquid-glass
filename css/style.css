@@ -528,29 +528,59 @@ input:checked + .toggle-slider {
 
 /* Dropdown Styles */
 .dropdown {
-    position: absolute;
-    top: 35px;
-    right: 0;
+    position: fixed; /* Changed from absolute to fixed */
     width: 250px;
-    max-height: 300px;
+    max-height: 400px; /* Increased max height since it's no longer constrained by control pane */
     overflow-y: auto;
     border-radius: 8px;
-    z-index: 100;
+    z-index: 1000; /* Increased z-index to ensure it's above everything */
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    /* Position will be set dynamically by JavaScript */
+    
+    /* Custom scrollbar styling for dropdown */
+    scrollbar-width: thin; /* Firefox */
+    scrollbar-color: rgba(180, 180, 180, 0.4) transparent; /* Firefox */
 }
 
-.dropdown-header {
-    padding: 8px 12px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #bbb;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
+/* WebKit scrollbar styling for dropdown */
+.dropdown::-webkit-scrollbar {
+    width: 6px; /* Thinner than control panel */
+}
+
+.dropdown::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+}
+
+.dropdown::-webkit-scrollbar-thumb {
+    background-color: rgba(180, 180, 180, 0.4);
+    border-radius: 3px;
+    transition: background-color 0.2s ease;
+}
+
+.dropdown::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(150, 150, 150, 0.6);
+}
+
+/* Hide scrollbar arrows for dropdown */
+.dropdown::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .config-list {
     max-height: 250px;
     overflow-y: auto;
+    
+    /* Remove scrollbar from config-list since dropdown handles it */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Hide scrollbar for config-list on WebKit browsers */
+.config-list::-webkit-scrollbar {
+    display: none;
 }
 
 .config-item {
@@ -641,4 +671,24 @@ input:checked + .toggle-slider {
     overflow: hidden;
     /* margin-bottom will be set by default .control-group style, 
        but we can remove it when hidden if needed */
+}
+
+.preset-item {
+    background: rgba(0, 122, 255, 0.1);
+    border-left: 3px solid rgba(0, 122, 255, 0.5);
+}
+
+.preset-item:hover {
+    background: rgba(0, 122, 255, 0.2);
+}
+
+.config-separator {
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #999;
+    background: rgba(255, 255, 255, 0.05);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
