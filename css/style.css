@@ -542,6 +542,13 @@ input:checked + .toggle-slider {
     scrollbar-color: rgba(180, 180, 180, 0.4) transparent; /* Firefox */
 }
 
+.dropdown-header{
+    color: #fff;
+    font-size: 14px;
+    padding: 5px 15px;
+}
+
+
 /* WebKit scrollbar styling for dropdown */
 .dropdown::-webkit-scrollbar {
     width: 6px; /* Thinner than control panel */
