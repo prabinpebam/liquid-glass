@@ -48,14 +48,6 @@ export const fragmentShaderSource = `
     uniform bool u_enableChromaticAberration; // Changed from float to bool for the toggle
     uniform float u_chromaticAberrationAmount;
 
-    // Reflection
-    uniform bool u_enableReflection;
-    uniform float u_reflectionArcDegrees;
-    uniform float u_reflectionThickness;
-    uniform float u_reflectionOffset;
-    uniform float u_reflectionOpacity;
-    uniform float u_reflectionArcPositionOffset;
-
     // Background image system
     uniform bool u_hasBackgroundImages;
     uniform sampler2D u_backgroundImageTextures[8];
@@ -161,79 +153,6 @@ export const fragmentShaderSource = `
         }
 
         return backgroundColor;
-    }
-
-    /**
-     * Calculates reflection intensity based on arc positioning and edge distance
-     * p: current pixel's coordinates relative to the shape's center
-     * shapeSize: half-extents of the shape (width/2, height/2)
-     * shapeCornerRadius: corner radius of the shape
-     * reflectionThickness: thickness of the reflection in pixels
-     * reflectionOffset: offset to position reflection inside shape (px)
-     * arcDegrees: degrees of the reflection arc
-     * arcPositionOffset: offset for arc positioning in degrees (0-180)
-     * Returns reflection intensity (0.0 to 1.0)
-     */
-    float getReflectionIntensity(vec2 p, vec2 shapeSize, float shapeCornerRadius, float reflectionThickness, float reflectionOffset, float arcDegrees, float arcPositionOffset) {
-        // Calculate distance from center
-        float distanceFromCenter = length(p);
-        if (distanceFromCenter < 0.001) return 0.0; // Avoid division by zero
-        
-        // Get angle from center to current pixel
-        float pixelAngle = atan(p.y, p.x);
-        
-        // Convert arc degrees to radians
-        float arcRadians = radians(arcDegrees);
-        
-        // Apply position offset to the base arc position
-        // Default is 135 degrees (top-left), offset allows 0-180 degree rotation
-        float baseArcPosition = radians(135.0 + arcPositionOffset);
-        
-        // First arc center
-        float arc1Center = baseArcPosition;
-        float arc2Center = arc1Center + radians(180.0); // Diametrically opposite
-        
-        // Calculate angular distance from arc centers for both arcs
-        float angularDist1 = abs(mod(pixelAngle - arc1Center + radians(180.0), radians(360.0)) - radians(180.0));
-        float angularDist2 = abs(mod(pixelAngle - arc2Center + radians(180.0), radians(360.0)) - radians(180.0));
-        
-        // Find the minimum angular distance to either arc
-        float minAngularDist = min(angularDist1, angularDist2);
-        
-        // Check if pixel is within arc range with rounded tips
-        float arcHalfWidth = arcRadians * 0.5;
-        if (minAngularDist > arcHalfWidth) return 0.0;
-        
-        // Calculate SDF to shape edge
-        float shapeSDF = sdRoundedBox(p, shapeSize, shapeCornerRadius);
-        
-        // Apply reflection offset - move the reflection band inward by the offset amount
-        float reflectionOuterBoundary = -reflectionOffset;
-        float reflectionInnerBoundary = -reflectionOffset - reflectionThickness;
-        
-        // Only reflect in the offset reflection band
-        if (shapeSDF > reflectionOuterBoundary || shapeSDF < reflectionInnerBoundary) return 0.0;
-        
-        // Calculate position within reflection thickness (0 = inner edge, 1 = outer edge)
-        float reflectionFactor = (shapeSDF - reflectionInnerBoundary) / reflectionThickness;
-        
-        // Create base reflection intensity
-        float baseReflection = smoothstep(0.0, 1.0, reflectionFactor);
-        
-        // Create rounded arc tips by applying distance-based falloff near arc edges
-        float arcTipRadius = arcHalfWidth * 0.2; // 20% of arc width for tip rounding
-        float arcEdgeFalloff = 1.0;
-        if (minAngularDist > (arcHalfWidth - arcTipRadius)) {
-            // Near the arc edge - create rounded falloff
-            float distFromEdge = minAngularDist - (arcHalfWidth - arcTipRadius);
-            arcEdgeFalloff = 1.0 - smoothstep(0.0, arcTipRadius, distFromEdge);
-        }
-        
-        // Add distance-based falloff for more realistic reflection
-        float maxReflectionRadius = max(shapeSize.x, shapeSize.y) * 1.2;
-        float distanceFalloff = 1.0 - smoothstep(0.0, maxReflectionRadius, distanceFromCenter);
-        
-        return baseReflection * arcEdgeFalloff * distanceFalloff;
     }
 
     void main() {
@@ -543,32 +462,6 @@ export const fragmentShaderSource = `
                 );
                 // Glow lightens, so add. Color is white (1,1,1).
                 finalColor.rgb += vec3(1.0) * bottomGlowIntensity * u_bottomGlowOpacity * finalColor.a; // Modulate by glass alpha
-            }
-
-            // Apply reflections to main liquid glass
-            if (u_enableReflection && u_reflectionArcDegrees > 0.0) {
-                float reflectionIntensity = getReflectionIntensity(
-                    relativeToLiquidGlassCenter,
-                    u_rectangleSize * 0.5,
-                    cornerRadius,
-                    u_reflectionThickness,
-                    u_reflectionOffset,
-                    u_reflectionArcDegrees,
-                    u_reflectionArcPositionOffset
-                );
-                
-                // Add white reflection with true opacity control (can be fully opaque)
-                vec3 reflectionColor = vec3(1.0, 1.0, 1.0);
-                float reflectionOpacity = reflectionIntensity * (u_reflectionOpacity / 100.0); // Convert percentage to 0-1 range
-                
-                // Use additive blending for sharp, intense highlights when opacity is high
-                if (u_reflectionOpacity > 50.0) {
-                    // High opacity: additive blending for intense highlights
-                    finalColor.rgb += reflectionColor * reflectionOpacity;
-                } else {
-                    // Low opacity: standard mixing
-                    finalColor.rgb = mix(finalColor.rgb, reflectionColor, reflectionOpacity);
-                }
             }
 
             finalColor.rgb = clamp(finalColor.rgb, 0.0, 1.0);

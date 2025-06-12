@@ -57,23 +57,26 @@ export class UIControls {
         this.bottomGlowOpacitySlider = document.getElementById('bottomGlowOpacitySlider');
         this.bottomGlowOpacityValue = document.getElementById('bottomGlowOpacityValue');
 
-        // Reflection Controls
+        // Reflection Controls (new implementation)
         this.reflectionToggle = document.getElementById('reflectionToggle');
-        this.reflectionArcDegreesSlider = document.getElementById('reflectionArcDegreesSlider');
-        this.reflectionArcDegreesValue = document.getElementById('reflectionArcDegreesValue');
-        this.reflectionArcDegreesControlGroup = document.getElementById('reflectionArcDegreesControlGroup');
-        this.reflectionThicknessSlider = document.getElementById('reflectionThicknessSlider');
-        this.reflectionThicknessValue = document.getElementById('reflectionThicknessValue');
-        this.reflectionThicknessControlGroup = document.getElementById('reflectionThicknessControlGroup');
-        this.reflectionOffsetSlider = document.getElementById('reflectionOffsetSlider');
-        this.reflectionOffsetValue = document.getElementById('reflectionOffsetValue');
-        this.reflectionOffsetControlGroup = document.getElementById('reflectionOffsetControlGroup');
-        this.reflectionOpacitySlider = document.getElementById('reflectionOpacitySlider');
-        this.reflectionOpacityValue = document.getElementById('reflectionOpacityValue');
-        this.reflectionOpacityControlGroup = document.getElementById('reflectionOpacityControlGroup');
-        this.reflectionArcPositionOffsetSlider = document.getElementById('reflectionArcPositionOffsetSlider');
-        this.reflectionArcPositionOffsetValue = document.getElementById('reflectionArcPositionOffsetValue');
-        this.reflectionArcPositionOffsetControlGroup = document.getElementById('reflectionArcPositionOffsetControlGroup');
+
+        // Border parameters
+        this.reflectionBorderThicknessSlider = document.getElementById('reflectionBorderThicknessSlider');
+        this.reflectionBorderThicknessValue  = document.getElementById('reflectionBorderThicknessValue');
+        this.reflectionBorderBlurSlider      = document.getElementById('reflectionBorderBlurSlider');
+        this.reflectionBorderBlurValue       = document.getElementById('reflectionBorderBlurValue');
+        this.reflectionBorderOffsetSlider    = document.getElementById('reflectionBorderOffsetSlider');
+        this.reflectionBorderOffsetValue     = document.getElementById('reflectionBorderOffsetValue');
+        this.reflectionStartAngleSlider      = document.getElementById('reflectionStartAngleSlider');
+        this.reflectionStartAngleValue       = document.getElementById('reflectionStartAngleValue');
+
+        // Gradient stops (seven sliders)
+        this.reflectionStopSliders = [];
+        this.reflectionStopValues  = [];
+        for (let i = 1; i <= 7; i++) {
+            this.reflectionStopSliders[i] = document.getElementById(`reflectionStop${i}Slider`);
+            this.reflectionStopValues[i]  = document.getElementById(`reflectionStop${i}Value`);
+        }
 
         // UI Elements for interaction handler / other functionalities
         this.controlPanel = document.getElementById('controls-pane');
@@ -170,25 +173,35 @@ export class UIControls {
         this.setupSlider(this.bottomGlowOffsetYSlider, this.bottomGlowOffsetYValue, 'bottomGlowOffsetY', 0, 'px');
         this.setupSlider(this.bottomGlowOpacitySlider, this.bottomGlowOpacityValue, 'bottomGlowOpacity', 2);
 
-        // Reflection Controls
+        // Reflection Controls (new implementation)
         if (this.reflectionToggle) {
             this.reflectionToggle.checked = this.liquidGlassParams.enableReflection;
-            this.updateReflectionControlsVisibility(); // Initial visibility state
+            this.updateReflectionControlsVisibility();
             this.reflectionToggle.addEventListener('change', (e) => {
                 this.liquidGlassParams.enableReflection = e.target.checked;
                 console.log(`Checkbox changed: enableReflection, New value: ${this.liquidGlassParams.enableReflection}`);
                 this.updateReflectionControlsVisibility();
                 this.renderCallback();
             });
-        } else {
-            console.warn("reflectionToggle element not found.");
         }
-        this.setupSlider(this.reflectionArcDegreesSlider, this.reflectionArcDegreesValue, 'reflectionArcDegrees', 0, '°');
-        this.setupSlider(this.reflectionThicknessSlider, this.reflectionThicknessValue, 'reflectionThickness', 0, 'px');
-        this.setupSlider(this.reflectionOffsetSlider, this.reflectionOffsetValue, 'reflectionOffset', 0, 'px');
-        this.setupSlider(this.reflectionOpacitySlider, this.reflectionOpacityValue, 'reflectionOpacity', 0, '%');
-        this.setupSlider(this.reflectionArcPositionOffsetSlider, this.reflectionArcPositionOffsetValue, 'reflectionArcPositionOffset', 0, '°');
-        
+
+        // New reflection sliders
+        this.setupSlider(this.reflectionBorderThicknessSlider, this.reflectionBorderThicknessValue, 'reflectionBorderThickness', 0, 'px');
+        this.setupSlider(this.reflectionBorderBlurSlider,      this.reflectionBorderBlurValue,      'reflectionBorderBlur',      1, 'px');
+        this.setupSlider(this.reflectionBorderOffsetSlider,    this.reflectionBorderOffsetValue,    'reflectionBorderOffset',    0, 'px');
+        this.setupSlider(this.reflectionStartAngleSlider,      this.reflectionStartAngleValue,      'reflectionStartAngle',      0, '°');
+
+        // Gradient stop sliders (Stop1-Stop7)
+        for (let i = 1; i <= 7; i++) {
+            this.setupSlider(
+                this.reflectionStopSliders[i],
+                this.reflectionStopValues[i],
+                `reflectionStop${i}`,
+                0,
+                '%'
+            );
+        }
+
         // Image upload listener
         if (this.imageUpload) {
             if (!this.imageUpload.listenerAdded) { // Prevent multiple listeners if initialize is called more than once
@@ -482,35 +495,16 @@ export class UIControls {
     }
 
     updateReflectionControlsVisibility() {
-        const controlGroups = [
-            this.reflectionArcDegreesControlGroup,
-            this.reflectionThicknessControlGroup,
-            this.reflectionOffsetControlGroup,
-            this.reflectionOpacityControlGroup,
-            this.reflectionArcPositionOffsetControlGroup
-        ];
-        
-        const sliders = [
-            this.reflectionArcDegreesSlider,
-            this.reflectionThicknessSlider,
-            this.reflectionOffsetSlider,
-            this.reflectionOpacitySlider,
-            this.reflectionArcPositionOffsetSlider
-        ];
-        
-        controlGroups.forEach((group, index) => {
-            if (group && sliders[index]) {
-                if (this.liquidGlassParams.enableReflection) {
-                    group.style.maxHeight = '100px';
-                    group.style.opacity = '1';
-                    group.style.pointerEvents = 'auto';
-                    sliders[index].disabled = false;
-                } else {
-                    group.style.maxHeight = '0';
-                    group.style.opacity = '0';
-                    group.style.pointerEvents = 'none';
-                    sliders[index].disabled = true;
-                }
+        // Toggle visibility of all control-groups inside the reflections tab
+        document.querySelectorAll('#tab-reflections .control-group').forEach(group => {
+            if (this.liquidGlassParams.enableReflection) {
+                group.style.maxHeight     = '100px';
+                group.style.opacity       = '1';
+                group.style.pointerEvents = 'auto';
+            } else {
+                group.style.maxHeight     = '0';
+                group.style.opacity       = '0';
+                group.style.pointerEvents = 'none';
             }
         });
     }

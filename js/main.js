@@ -6,6 +6,7 @@ import { vertexShaderSource, fragmentShaderSource } from './shaders.js';
 import { compileShader, createProgram, getUniformLocations, initializeBackgroundImageTextures } from './webgl-utils.js';
 import { UIControls } from './ui-controls.js';
 import { InteractionHandler } from './interaction-handler.js';
+import ReflectionBorder from './reflections.js';     // ← NEW
 
 const canvas = document.getElementById('webglCanvas');
 const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
@@ -49,7 +50,22 @@ class LiquidGlassApp {
             reflectionThickness: 20.0,
             reflectionOpacity: 40.0,
             reflectionArcPositionOffset: 0.0,
-            reflectionOffset: 5.0
+            reflectionOffset: 5.0,
+
+            // ─── NEW BORDER-REFLECTION PARAMETERS ───
+            reflectionBorderThickness: 8,   // px
+            reflectionBorderBlur:       4,  // px (0-10)
+            reflectionBorderOffset:     6,  // px   inside shape
+            reflectionStartAngle:       0,  // deg (0-360)
+
+            // gradient stop positions (percent 0-100)
+            reflectionStop1: 0,
+            reflectionStop2: 10,
+            reflectionStop3: 40,
+            reflectionStop4: 50,
+            reflectionStop5: 60,
+            reflectionStop6: 90,
+            reflectionStop7: 100
         };
         
         this.backgroundImagesData = [];
@@ -62,6 +78,9 @@ class LiquidGlassApp {
         this.uiControls = null;
         this.interactionHandler = null;
         this.controlPanelResizeObserver = null; // Add a property to hold the observer
+
+        this.reflectionOverlay = null;          // ← NEW
+        this.reflectionRenderer = null;         // ← NEW
     }
 
     initializePositions() {
@@ -90,11 +109,30 @@ class LiquidGlassApp {
     }
 
     initialize() {
+        this.createReflectionOverlay();         // ← NEW
         this.setupWebGL();
         this.setupUI();
         this.setupEventHandlers();
         this.resizeCanvas();
     }
+
+    /* ---------- NEW ---------- */
+    createReflectionOverlay() {
+        const scene = document.querySelector('.scene');
+        this.reflectionOverlay = document.createElement('canvas');
+        this.reflectionOverlay.id = 'reflectionCanvas';
+        Object.assign(this.reflectionOverlay.style, {
+            position: 'absolute',
+            left: 0,
+            top: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'none'
+        });
+        scene.appendChild(this.reflectionOverlay);
+        this.reflectionRenderer = new ReflectionBorder(this.reflectionOverlay);
+    }
+    /* ------------------------- */
 
     setupWebGL() {
         // Compile shaders and create program
@@ -267,6 +305,12 @@ class LiquidGlassApp {
             this.interactionHandler.updateControlPanelGLPosition();
         }
         
+        // keep overlay same size
+        if (this.reflectionOverlay) {
+            this.reflectionOverlay.width  = this.canvas.clientWidth;
+            this.reflectionOverlay.height = this.canvas.clientHeight;
+        }
+        
         this.render();
     }
 
@@ -302,7 +346,73 @@ class LiquidGlassApp {
 
         this.setUniforms();
         this.gl.drawArrays(this.gl.TRIANGLES, 0, 6);
+        this.drawReflectionBorder();            // ← NEW
     }
+
+    /* ---------- NEW ---------- */
+    drawReflectionBorder() {
+        if (!this.reflectionRenderer) return;
+
+        // --- effective radius (shader also clamps, we stop 1 px earlier) ----
+        const halfShortSide = 0.5 * Math.min(
+            this.liquidGlassParams.rectangleWidth,
+            this.liquidGlassParams.rectangleHeight
+        );
+
+        // stay at least 1 px below the “perfect circle” limit
+        const circleGuard = 1.0;
+        const effectiveCornerRadius = Math.min(
+            this.liquidGlassParams.rectangleCornerRadius,
+            Math.max(0, halfShortSide - circleGuard)
+        );
+        // ---------------------------------------------------------------------
+
+        // ----- DEBUG LOG ------------------------------------------------------
+        const borderR = Math.max(
+            0,
+            effectiveCornerRadius - this.liquidGlassParams.reflectionBorderOffset
+        );
+        if (effectiveCornerRadius !== this._lastShapeR || borderR !== this._lastBorderR) {
+            console.log(`[CornerRadius] shape=${effectiveCornerRadius.toFixed(2)}  border=${borderR.toFixed(2)}`);
+            this._lastShapeR  = effectiveCornerRadius;
+            this._lastBorderR = borderR;
+        }
+        // ---------------------------------------------------------------------
+
+        if (!this.liquidGlassParams.enableReflection) {
+            this.reflectionRenderer.ctx.clearRect(
+                0, 0, this.reflectionOverlay.width, this.reflectionOverlay.height
+            );
+            return;
+        }
+
+        this.reflectionRenderer.draw({
+            center: {
+                x: this.positions.liquidGlassCenterPosition.x,
+                // flip Y (GL → 2D canvas)
+                y: this.canvas.height - this.positions.liquidGlassCenterPosition.y
+            },
+            size: {
+                w: this.liquidGlassParams.rectangleWidth,
+                h: this.liquidGlassParams.rectangleHeight
+            },
+            cornerRadius: effectiveCornerRadius,         // ← use clamped value
+            thickness:    this.liquidGlassParams.reflectionBorderThickness,
+            blur:         this.liquidGlassParams.reflectionBorderBlur,
+            offset:       this.liquidGlassParams.reflectionBorderOffset,
+            rotationOffsetDeg: this.liquidGlassParams.reflectionStartAngle,
+            stopPositions: [
+                this.liquidGlassParams.reflectionStop1 / 100,
+                this.liquidGlassParams.reflectionStop2 / 100,
+                this.liquidGlassParams.reflectionStop3 / 100,
+                this.liquidGlassParams.reflectionStop4 / 100,
+                this.liquidGlassParams.reflectionStop5 / 100,
+                this.liquidGlassParams.reflectionStop6 / 100,
+                this.liquidGlassParams.reflectionStop7 / 100
+            ]
+        });
+    }
+    /* ------------------------- */
 
     setUniforms() {
         const gl = this.gl;
@@ -396,6 +506,19 @@ class LiquidGlassApp {
         gl.uniform1f(u.reflectionOffset, this.liquidGlassParams.reflectionOffset);
         gl.uniform1f(u.reflectionOpacity, this.liquidGlassParams.reflectionOpacity);
         gl.uniform1f(u.reflectionArcPositionOffset, this.liquidGlassParams.reflectionArcPositionOffset);
+
+        // Border Reflection
+        gl.uniform1f(u.reflectionBorderThickness, this.liquidGlassParams.reflectionBorderThickness);
+        gl.uniform1f(u.reflectionBorderBlur, this.liquidGlassParams.reflectionBorderBlur);
+        gl.uniform1f(u.reflectionBorderOffset, this.liquidGlassParams.reflectionBorderOffset);
+        gl.uniform1f(u.reflectionStartAngle, this.liquidGlassParams.reflectionStartAngle);
+        gl.uniform1f(u.reflectionStop1, this.liquidGlassParams.reflectionStop1);
+        gl.uniform1f(u.reflectionStop2, this.liquidGlassParams.reflectionStop2);
+        gl.uniform1f(u.reflectionStop3, this.liquidGlassParams.reflectionStop3);
+        gl.uniform1f(u.reflectionStop4, this.liquidGlassParams.reflectionStop4);
+        gl.uniform1f(u.reflectionStop5, this.liquidGlassParams.reflectionStop5);
+        gl.uniform1f(u.reflectionStop6, this.liquidGlassParams.reflectionStop6);
+        gl.uniform1f(u.reflectionStop7, this.liquidGlassParams.reflectionStop7);
     }
 }
 

@@ -133,29 +133,80 @@
         <div id="tab-reflections" class="tab-panel">
             <h4>Reflections
                 <label class="toggle-switch inline-toggle">
-                    <input type="checkbox" id="reflectionToggle"> 
+                    <input type="checkbox" id="reflectionToggle">
                     <span class="toggle-slider"></span>
                 </label>
             </h4>
-            <div class="control-group" id="reflectionArcDegreesControlGroup">
-                <label for="reflectionArcDegreesSlider">Arc Degrees: <span id="reflectionArcDegreesValue"></span>°</label>
-                <input type="range" id="reflectionArcDegreesSlider" min="0" max="180" step="1" value="120">
+
+            <!-- ─── remove legacy arc-based controls ─── -->
+            <!--
+            <div class="control-group" id="reflectionArcDegreesControlGroup"> ... </div>
+            <div class="control-group" id="reflectionThicknessControlGroup"> ... </div>
+            <div class="control-group" id="reflectionOffsetControlGroup"> ... </div>
+            <div class="control-group" id="reflectionOpacityControlGroup"> ... </div>
+            <div class="control-group" id="reflectionArcPositionOffsetControlGroup"> ... </div>
+            -->
+
+            <!-- ─── new border-reflection controls ─── -->
+            <div class="control-group">
+                <label for="reflectionBorderThicknessSlider">
+                    Border Thickness: <span id="reflectionBorderThicknessValue"></span>px
+                </label>
+                <input type="range" id="reflectionBorderThicknessSlider" min="1" max="50" step="1" value="8">
             </div>
-            <div class="control-group" id="reflectionThicknessControlGroup">
-                <label for="reflectionThicknessSlider">Thickness: <span id="reflectionThicknessValue"></span>px</label>
-                <input type="range" id="reflectionThicknessSlider" min="5" max="50" step="1" value="20">
+
+            <div class="control-group">
+                <label for="reflectionBorderBlurSlider">
+                    Border Blur: <span id="reflectionBorderBlurValue"></span>px
+                </label>
+                <input type="range" id="reflectionBorderBlurSlider" min="0" max="10" step="0.5" value="4">
             </div>
-            <div class="control-group" id="reflectionOffsetControlGroup">
-                <label for="reflectionOffsetSlider">Offset: <span id="reflectionOffsetValue"></span>px</label>
-                <input type="range" id="reflectionOffsetSlider" min="0" max="30" step="1" value="5">
+
+            <div class="control-group">
+                <label for="reflectionBorderOffsetSlider">
+                    Border Offset: <span id="reflectionBorderOffsetValue"></span>px
+                </label>
+                <input type="range" id="reflectionBorderOffsetSlider" min="0" max="30" step="1" value="6">
             </div>
-            <div class="control-group" id="reflectionOpacityControlGroup">
-                <label for="reflectionOpacitySlider">Opacity: <span id="reflectionOpacityValue"></span>%</label>
-                <input type="range" id="reflectionOpacitySlider" min="0" max="100" step="1" value="40">
+
+            <div class="control-group">
+                <label for="reflectionStartAngleSlider">
+                    Start Angle: <span id="reflectionStartAngleValue"></span>°
+                </label>
+                <input type="range" id="reflectionStartAngleSlider" min="0" max="360" step="1" value="0">
             </div>
-            <div class="control-group" id="reflectionArcPositionOffsetControlGroup">
-                <label for="reflectionArcPositionOffsetSlider">Arc Position Offset: <span id="reflectionArcPositionOffsetValue"></span>°</label>
-                <input type="range" id="reflectionArcPositionOffsetSlider" min="0" max="180" step="1" value="0">
+
+            <hr class="separator">
+            <h4>Gradient Stop Positions (%)</h4>
+
+            <!-- Seven stop sliders -->
+            <div class="control-group">
+                <label for="reflectionStop1Slider">Stop 1: <span id="reflectionStop1Value"></span>%</label>
+                <input type="range" id="reflectionStop1Slider" min="0"  max="100" step="1"  value="0">
+            </div>
+            <div class="control-group">
+                <label for="reflectionStop2Slider">Stop 2: <span id="reflectionStop2Value"></span>%</label>
+                <input type="range" id="reflectionStop2Slider" min="0"  max="100" step="1"  value="10">
+            </div>
+            <div class="control-group">
+                <label for="reflectionStop3Slider">Stop 3: <span id="reflectionStop3Value"></span>%</label>
+                <input type="range" id="reflectionStop3Slider" min="0"  max="100" step="1"  value="40">
+            </div>
+            <div class="control-group">
+                <label for="reflectionStop4Slider">Stop 4: <span id="reflectionStop4Value"></span>%</label>
+                <input type="range" id="reflectionStop4Slider" min="0"  max="100" step="1"  value="50">
+            </div>
+            <div class="control-group">
+                <label for="reflectionStop5Slider">Stop 5: <span id="reflectionStop5Value"></span>%</label>
+                <input type="range" id="reflectionStop5Slider" min="0"  max="100" step="1"  value="60">
+            </div>
+            <div class="control-group">
+                <label for="reflectionStop6Slider">Stop 6: <span id="reflectionStop6Value"></span>%</label>
+                <input type="range" id="reflectionStop6Slider" min="0"  max="100" step="1"  value="90">
+            </div>
+            <div class="control-group">
+                <label for="reflectionStop7Slider">Stop 7: <span id="reflectionStop7Value"></span>%</label>
+                <input type="range" id="reflectionStop7Slider" min="0"  max="100" step="1"  value="100">
             </div>
         </div>
     </div>
