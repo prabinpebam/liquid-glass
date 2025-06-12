@@ -2,7 +2,7 @@
 
 A WebGL-based implementation of Apple's "Liquid Glass" visual effect from iOS 26, featuring realistic glass refraction distortion applied to UI surfaces with controllable distortion, frosting, and transparency.
 
-![Liquid Glass Effect Demo](assets/demo-screenshot.png)
+![Liquid Glass Effect Demo](assets/liquid-glass-demo.png)
 
 ## Features
 
