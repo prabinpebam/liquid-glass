@@ -102,6 +102,7 @@ export class UIControls {
         this.saveCancelBtn = document.getElementById('save-cancel-btn');
         this.loadDropdown = document.getElementById('load-dropdown');
         this.configList = document.getElementById('config-list');
+        this.clearAllUserConfigsBtn = null; // Will be created if not in HTML
 
         // NEW sliders for gradient layout
         this.highlightPctSlider  = document.getElementById('highlightPctSlider');
@@ -505,57 +506,66 @@ export class UIControls {
 
     populateConfigList() {
         const allConfigs = this.configManager.getAllConfigurations();
-        const presetNames = Object.keys(allConfigs.presets);
-        const userConfigNames = Object.keys(allConfigs.userConfigs);
+        const presetKeys = Object.keys(allConfigs.presets);
+        const userConfigIds = Object.keys(allConfigs.userConfigs);
 
         let html = '';
 
         // Add default presets first
-        if (presetNames.length > 0) {
-            presetNames.forEach(name => {
+        if (presetKeys.length > 0) {
+            presetKeys.forEach(name => { // 'name' is the key for default presets
+                const preset = allConfigs.presets[name];
+                const displayName = preset.displayName || name; // Use displayName from preset object
+                const dateStr = typeof preset.savedAt === 'number' && preset.savedAt !== 0 ? new Date(preset.savedAt).toLocaleString() : "Built-in preset";
                 html += `
                     <div class="config-item preset-item" data-config-name="${name}">
                         <div class="config-item-content">
-                            <div class="config-name">${name}</div>
-                            <div class="config-date">Built-in preset</div>
+                            <div class="config-name">${displayName}</div>
+                            <div class="config-date">${dateStr}</div>
                         </div>
                     </div>
                 `;
             });
         }
 
-        // Add separator if there are user configs
-        if (userConfigNames.length > 0) {
+        // Add separator if there are user configs and presets
+        if (presetKeys.length > 0 && userConfigIds.length > 0) {
             html += '<div class="config-separator">Your Configurations</div>';
-            
-            userConfigNames.forEach(name => {
-                const config = allConfigs.userConfigs[name];
+        } else if (userConfigIds.length > 0 && presetKeys.length === 0) {
+            // If only user configs, add a header
+             html += '<div class="config-separator">Your Configurations</div>';
+        }
+
+        // Add user configurations
+        if (userConfigIds.length > 0) {
+            userConfigIds.forEach(id => {
+                const config = allConfigs.userConfigs[id];
+                const displayName = config.displayName || id; // Use displayName, fallback to ID
                 const date = new Date(config.savedAt).toLocaleString();
-                
                 html += `
-                    <div class="config-item user-config-item" data-config-name="${name}">
+                    <div class="config-item user-config-item" data-config-name="${id}">
                         <div class="config-item-content">
-                            <div class="config-name">${name}</div>
+                            <div class="config-name">${displayName}</div>
                             <div class="config-date">${date}</div>
                         </div>
-                        <div class="delete-config" data-config-name="${name}">×</div>
+                        <div class="delete-config" data-config-name="${id}">×</div>
                     </div>
                 `;
             });
         }
 
-        if (presetNames.length === 0 && userConfigNames.length === 0) {
+        if (presetKeys.length === 0 && userConfigIds.length === 0) {
             html = '<div class="no-configs">No saved configurations</div>';
         }
 
         this.configList.innerHTML = html;
 
-        // Add event listeners
+        // Add event listeners for config items
         this.configList.querySelectorAll('.config-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 if (!e.target.classList.contains('delete-config')) {
-                    const configName = item.dataset.configName;
-                    this.loadConfiguration(configName);
+                    const configNameOrId = item.dataset.configName; // This is preset key or user config ID
+                    this.loadConfiguration(configNameOrId);
                 }
             });
         });
@@ -564,26 +574,82 @@ export class UIControls {
         this.configList.querySelectorAll('.user-config-item .delete-config').forEach(deleteBtn => {
             deleteBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                const configName = deleteBtn.dataset.configName;
-                this.deleteConfiguration(configName);
+                const configId = deleteBtn.dataset.configName; // This is the user config ID
+                this.deleteConfiguration(configId);
             });
         });
-    }
 
-    loadConfiguration(name) {
-        if (this.configManager.loadConfiguration(name)) {
-            this.hideLoadDropdown();
-            this.showToast(`Configuration "${name}" loaded successfully!`);
+        // Manage "Clear All User Presets" button
+        if (!this.clearAllUserConfigsBtn) {
+            this.clearAllUserConfigsBtn = document.createElement('button');
+            this.clearAllUserConfigsBtn.id = 'clear-all-user-configs-btn';
+            this.clearAllUserConfigsBtn.className = 'frosted-button danger'; // Not full-width
+            this.clearAllUserConfigsBtn.textContent = 'Clear All My Presets';
+            // Styles for centering and margin
+            this.clearAllUserConfigsBtn.style.display = 'block'; // Or 'inline-block' if preferred with text-align on parent
+            this.clearAllUserConfigsBtn.style.margin = '20px auto 10px auto'; // Top, LR auto (center), Bottom
+            this.clearAllUserConfigsBtn.style.padding = '8px 16px'; // Ensure some padding if not full-width
+
+            this.clearAllUserConfigsBtn._handler = () => this.handleDeleteAllUserConfigs();
+            this.clearAllUserConfigsBtn.addEventListener('click', this.clearAllUserConfigsBtn._handler);
+        }
+
+        // Remove if already present to avoid duplicates and ensure it's appended correctly
+        if (this.clearAllUserConfigsBtn.parentElement) {
+            this.clearAllUserConfigsBtn.parentElement.removeChild(this.clearAllUserConfigsBtn);
+        }
+
+        // Append to configList to be part of scrollable content, only if user configs exist
+        if (userConfigIds.length > 0) {
+            this.configList.appendChild(this.clearAllUserConfigsBtn); // Append to the list itself
+            this.clearAllUserConfigsBtn.style.display = 'block'; // Or 'inline-block'
         } else {
-            alert(`Failed to load configuration "${name}"`);
+            this.clearAllUserConfigsBtn.style.display = 'none';
         }
     }
 
-    deleteConfiguration(name) {
-        if (confirm(`Are you sure you want to delete "${name}"?`)) {
-            if (this.configManager.deleteConfiguration(name)) {
+    loadConfiguration(nameOrId) { // nameOrId can be preset key or user config ID
+        let displayName = nameOrId;
+        const allConfigs = this.configManager.getAllConfigurations();
+        if (allConfigs.presets.hasOwnProperty(nameOrId)) {
+            displayName = allConfigs.presets[nameOrId].displayName || nameOrId;
+        } else if (allConfigs.userConfigs.hasOwnProperty(nameOrId)) {
+            displayName = allConfigs.userConfigs[nameOrId].displayName || nameOrId;
+        }
+
+        if (this.configManager.loadConfiguration(nameOrId)) {
+            this.hideLoadDropdown();
+            this.showToast(`Configuration "${displayName}" loaded successfully!`);
+        } else {
+            alert(`Failed to load configuration "${displayName}"`);
+        }
+    }
+
+    deleteConfiguration(id) { // 'id' is the user config ID
+        const configToDelete = this.configManager.getSavedConfigurations()[id];
+        const displayName = configToDelete ? configToDelete.displayName : id;
+
+        if (confirm(`Are you sure you want to delete "${displayName}"?`)) {
+            if (this.configManager.deleteConfiguration(id)) {
                 this.populateConfigList(); // Refresh the list
-                this.showToast(`Configuration "${name}" deleted.`);
+                this.showToast(`Configuration "${displayName}" deleted.`);
+            } else {
+                // ConfigManager already logs error, an alert might be redundant
+                // alert(`Failed to delete configuration "${displayName}".`);
+            }
+        }
+    }
+
+    handleDeleteAllUserConfigs() {
+        if (confirm('Are you sure you want to delete ALL your saved presets? This action cannot be undone.')) {
+            if (this.configManager.deleteAllUserConfigurations()) {
+                this.populateConfigList(); // Refresh the list
+                this.showToast('All user presets have been deleted.');
+                this.hideLoadDropdown(); // Close dropdown after clearing
+                // Optionally, load a default preset
+                // this.configManager.loadDefaultPreset(DEFAULT_PRESET_NAME); 
+            } else {
+                alert('Failed to delete all user presets.');
             }
         }
     }

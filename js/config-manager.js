@@ -38,23 +38,29 @@ export class ConfigManager {
             return false;
         }
 
-        // Prevent saving over default presets
+        // Prevent saving over default presets (though IDs make this less likely for storage key)
+        // This check is more about the user experience of "naming" a config.
         if (DEFAULT_PRESETS[name]) {
-            alert('Cannot overwrite built-in presets. Please choose a different name.');
-            return false;
+            // It's generally fine to have a user config with the same display name as a default preset,
+            // as they will have different IDs.
+            // However, if strict prevention is desired, this could be re-evaluated.
+            // For now, we allow it, as IDs differentiate them.
         }
 
         const currentConfig = this.extractCurrentConfiguration();
+        currentConfig.displayName = name; // Store the human-readable name
+        currentConfig.id = `user_config_${Date.now()}`; // Generate unique ID
+
         const savedConfigs = this.getSavedConfigurations();
         
-        savedConfigs[name] = currentConfig;
+        savedConfigs[currentConfig.id] = currentConfig; // Save by ID
         
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(savedConfigs));
             
             // Log the saved configuration JSON
-            console.log(`Saving configuration "${name}":`, JSON.stringify(currentConfig, null, 2));
-            console.log(`Configuration "${name}" saved successfully`);
+            console.log(`Saving configuration "${name}" with ID "${currentConfig.id}":`, JSON.stringify(currentConfig, null, 2));
+            console.log(`Configuration "${name}" (ID: ${currentConfig.id}) saved successfully`);
             
             return true;
         } catch (error) {
@@ -66,27 +72,30 @@ export class ConfigManager {
     /**
      * Loads configuration from localStorage or default presets
      */
-    loadConfiguration(name) {
+    loadConfiguration(nameOrId) {
         let config = null;
+        let configDisplayName = nameOrId; // Default to nameOrId
 
-        // Check if it's a default preset first
-        if (DEFAULT_PRESETS[name]) {
-            config = DEFAULT_PRESETS[name];
-            console.log(`Loading default preset "${name}":`, JSON.stringify(config, null, 2));
+        // Check if it's a default preset first (using its predefined name/key)
+        if (DEFAULT_PRESETS.hasOwnProperty(nameOrId)) {
+            config = DEFAULT_PRESETS[nameOrId];
+            configDisplayName = config.displayName || nameOrId; // Use preset's displayName
+            console.log(`Loading default preset "${configDisplayName}":`, JSON.stringify(config, null, 2));
         } else {
-            // Check user saved configurations
+            // Check user saved configurations (using unique ID)
             const savedConfigs = this.getSavedConfigurations();
-            config = savedConfigs[name];
+            config = savedConfigs[nameOrId]; // nameOrId here is the unique ID
             
             if (!config) {
-                console.error(`Configuration "${name}" not found`);
+                console.error(`Configuration with ID "${nameOrId}" not found`);
                 return false;
             }
-            console.log(`Loading user configuration "${name}":`, JSON.stringify(config, null, 2));
+            configDisplayName = config.displayName || nameOrId; // Use user config's displayName
+            console.log(`Loading user configuration "${configDisplayName}" (ID: "${nameOrId}"):`, JSON.stringify(config, null, 2));
         }
 
         this.animateToConfiguration(config);
-        console.log(`Configuration "${name}" loaded successfully`);
+        console.log(`Configuration "${configDisplayName}" loaded successfully`);
         return true;
     }
 
@@ -133,33 +142,54 @@ export class ConfigManager {
     /**
      * Deletes a user configuration from localStorage (cannot delete presets)
      */
-    deleteConfiguration(name) {
-        if (!name || typeof name !== 'string' || name.trim() === '') {
-            console.error('Invalid configuration name provided');
+    deleteConfiguration(identifier) {
+        if (!identifier || typeof identifier !== 'string' || identifier.trim() === '') {
+            console.error('Invalid configuration identifier provided for deletion');
             return false;
         }
 
-        // Prevent deleting default presets
-        if (DEFAULT_PRESETS[name]) {
-            console.error('Cannot delete built-in presets');
+        // Check if the identifier is a name/key of a default preset. Presets cannot be deleted.
+        if (DEFAULT_PRESETS.hasOwnProperty(identifier)) {
+            const presetDisplayName = DEFAULT_PRESETS[identifier].displayName || identifier;
+            console.error(`Attempted to delete a default preset ("${presetDisplayName}"). Presets cannot be deleted.`);
             return false;
         }
 
+        // If not a default preset name, assume 'identifier' is a unique ID for a user config
         const savedConfigs = this.getSavedConfigurations();
         
-        if (!(name in savedConfigs)) {
-            console.error(`Configuration "${name}" not found`);
+        if (!savedConfigs.hasOwnProperty(identifier)) {
+            console.error(`User configuration with ID "${identifier}" not found for deletion.`);
             return false;
         }
-
-        delete savedConfigs[name];
+        
+        const displayName = savedConfigs[identifier].displayName || identifier; // Get displayName for logging
+        delete savedConfigs[identifier];
         
         try {
             localStorage.setItem(this.storageKey, JSON.stringify(savedConfigs));
-            console.log(`Configuration "${name}" deleted successfully`);
+            console.log(`User configuration "${displayName}" (ID: "${identifier}") deleted successfully`);
             return true;
         } catch (error) {
-            console.error('Failed to delete configuration:', error);
+            console.error('Failed to delete user configuration:', error);
+            return false;
+        }
+    }
+
+    /**
+     * Deletes all user configurations from localStorage.
+     * This is a destructive operation.
+     */
+    deleteAllUserConfigurations() {
+        try {
+            localStorage.removeItem(this.storageKey);
+            console.log('All user configurations have been deleted successfully.');
+            // Optionally, clear the current state as well if a full reset is desired
+            // localStorage.removeItem(this.currentStateKey);
+            // console.log('Current auto-saved state has been cleared.');
+            return true;
+        } catch (error) {
+            console.error('Failed to delete all user configurations:', error);
             return false;
         }
     }
@@ -231,7 +261,9 @@ export class ConfigManager {
             showGrid: this.liquidGlassParams.showGrid,
             gridSpacing: this.liquidGlassParams.gridSpacing,
             
-            // Metadata
+            // Metadata - 'savedAt' is fine.
+            // 'id' and 'displayName' are NOT part of the core extractable parameters.
+            // They are added during save for user configs, or are inherent in preset definitions.
             savedAt: Date.now()
         };
     }
@@ -300,7 +332,8 @@ export class ConfigManager {
      */
     interpolateValues(startValues, targetValues, progress) {
         Object.keys(targetValues).forEach(key => {
-            if (key === 'savedAt') return; // Skip metadata
+            // Skip metadata properties like id, displayName, savedAt during interpolation
+            if (key === 'savedAt' || key === 'id' || key === 'displayName') return; 
             
             const startValue = startValues[key];
             const targetValue = targetValues[key];
@@ -328,7 +361,8 @@ export class ConfigManager {
      */
     applyConfigurationImmediate(config) {
         Object.keys(config).forEach(key => {
-            if (key === 'savedAt') return; // Skip metadata
+            // Skip metadata properties like id, displayName, savedAt when applying config
+            if (key === 'savedAt' || key === 'id' || key === 'displayName') return; 
             
             if (key === 'glassBaseColor') {
                 this.liquidGlassParams[key] = [...config[key]];
