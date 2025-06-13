@@ -128,6 +128,25 @@ export default class ReflectionBorder {
             r
         );
         ctx.stroke();
+
+        /* ---------- NEW : keep blur inside shape ------------------ */
+        ctx.filter = 'none';                         // no blur for mask
+        ctx.globalCompositeOperation = 'destination-in';
+
+        // mask path = original rounded rect (no shrink / blur)
+        roundedRectPath(
+            p.center.x - p.size.w * 0.5,
+            p.center.y - p.size.h * 0.5,
+            p.size.w,
+            p.size.h,
+            p.cornerRadius
+        );
+        ctx.fillStyle = '#000';  // colour irrelevant for destination-in
+        ctx.fill();
+
+        ctx.globalCompositeOperation = 'source-over'; // reset
+        /* ----------------------------------------------------------- */
+
         ctx.restore();
     }
 }
