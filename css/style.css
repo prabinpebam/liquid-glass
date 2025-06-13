@@ -699,3 +699,12 @@ input:checked + .toggle-slider {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
+#reflectionGradientSlider {
+    margin: 8px 0 4px 0;
+}
+.gradient-readout{
+    font-size: 10px;
+    color:#bbb;
+    text-align:center;
+}

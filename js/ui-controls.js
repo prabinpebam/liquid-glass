@@ -70,13 +70,15 @@ export class UIControls {
         this.reflectionStartAngleSlider      = document.getElementById('reflectionStartAngleSlider');
         this.reflectionStartAngleValue       = document.getElementById('reflectionStartAngleValue');
 
-        // Gradient stops (seven sliders)
-        this.reflectionStopSliders = [];
-        this.reflectionStopValues  = [];
-        for (let i = 1; i <= 7; i++) {
-            this.reflectionStopSliders[i] = document.getElementById(`reflectionStop${i}Slider`);
-            this.reflectionStopValues[i]  = document.getElementById(`reflectionStop${i}Value`);
-        }
+        // NEW sliders
+        this.reflectionOverlayOpacitySlider  = document.getElementById('reflectionOverlayOpacitySlider');
+        this.reflectionOverlayOpacityValue   = document.getElementById('reflectionOverlayOpacityValue');
+        
+        // NEW dual-thumb slider refs
+        this.gradientSlider = document.getElementById('reflectionGradientSlider');
+        this.gradientHVal   = document.getElementById('gradientHVal');
+        this.gradientTVal   = document.getElementById('gradientTVal');
+        this.gradientDVal   = document.getElementById('gradientDVal');
 
         // UI Elements for interaction handler / other functionalities
         this.controlPanel = document.getElementById('controls-pane');
@@ -100,6 +102,14 @@ export class UIControls {
         this.saveCancelBtn = document.getElementById('save-cancel-btn');
         this.loadDropdown = document.getElementById('load-dropdown');
         this.configList = document.getElementById('config-list');
+
+        // NEW sliders for gradient layout
+        this.highlightPctSlider  = document.getElementById('highlightPctSlider');
+        this.highlightPctVal     = document.getElementById('highlightPctVal');
+        this.transitionPctSlider = document.getElementById('transitionPctSlider');
+        this.transitionPctVal    = document.getElementById('transitionPctVal');
+        // this.darkPctSlider       = document.getElementById('darkPctSlider');
+        // this.darkPctVal          = document.getElementById('darkPctVal');
     }
 
     setGL(gl) {
@@ -108,6 +118,7 @@ export class UIControls {
 
     initialize() {
         console.log("UIControls initializing...");
+        const p = this.liquidGlassParams;   // ← single, authoritative alias
 
         // Main Glass Shape Sliders
         this.setupSlider(this.rectWidthSlider, this.rectWidthValue, 'rectangleWidth', 0, 'px');
@@ -190,17 +201,102 @@ export class UIControls {
         this.setupSlider(this.reflectionBorderBlurSlider,      this.reflectionBorderBlurValue,      'reflectionBorderBlur',      1, 'px');
         this.setupSlider(this.reflectionBorderOffsetSlider,    this.reflectionBorderOffsetValue,    'reflectionBorderOffset',    0, 'px');
         this.setupSlider(this.reflectionStartAngleSlider,      this.reflectionStartAngleValue,      'reflectionStartAngle',      0, '°');
+        this.setupSlider(
+            this.reflectionOverlayOpacitySlider,
+            this.reflectionOverlayOpacityValue,
+            'reflectionOverlayOpacity',
+            2                    // show two decimals
+        );
 
-        // Gradient stop sliders (Stop1-Stop7)
-        for (let i = 1; i <= 7; i++) {
-            this.setupSlider(
-                this.reflectionStopSliders[i],
-                this.reflectionStopValues[i],
-                `reflectionStop${i}`,
-                0,
-                '%'
-            );
+        // --------- (obsolete noUiSlider block was here) ---------
+        // const p = this.liquidGlassParams;          // ← delete this line
+        /* (whole noUiSlider block already removed) */
+        // --------------------------------------------------------------
+
+        // the surviving three-slider logic further below already contains
+        //   const p = this.liquidGlassParams;
+        // so no name collision remains.
+
+        /* ========== Gradient layout (%) sliders ========== */
+
+        // ----- helper to refresh labels & slider thumbs -----
+        const syncGradientUI = () => {
+            const h = p.reflectionHighlightSize;
+            const t = p.reflectionTransitionSize;
+            const d = (100 - 2 * h - 4 * t) / 2;
+
+            /* update labels – check for null first */
+            if (this.highlightPctVal)  this.highlightPctVal.textContent  = h.toFixed(0);
+            if (this.transitionPctVal) this.transitionPctVal.textContent = t.toFixed(0);
+
+            const darkLbl = document.getElementById('darkPctVal');
+            if (darkLbl) darkLbl.textContent = d.toFixed(0);
+
+            /* update sliders – check for null (dark slider no longer exists) */
+            if (this.highlightPctSlider)  this.highlightPctSlider.value  = h;
+            if (this.transitionPctSlider) this.transitionPctSlider.value = t;
+        };
+
+        // helper calculators --------------------------------------------------
+        function solveTD(hNew) {
+            const dOld = (100 - 2 * p.reflectionHighlightSize -
+                               4 * p.reflectionTransitionSize) / 2;
+            const ratioTD = p.reflectionTransitionSize / Math.max(dOld, 1e-6);
+            const remaining = 100 - 2 * hNew;
+            const dNew = remaining / (4 * ratioTD + 2);
+            return { t: ratioTD * dNew, d: dNew };
         }
+        function solveHD(tNew) {
+            const dOld = (100 - 2 * p.reflectionHighlightSize -
+                               4 * p.reflectionTransitionSize) / 2;
+            const ratioHD = p.reflectionHighlightSize / Math.max(dOld, 1e-6);
+            const remaining = 100 - 4 * tNew;
+            const dNew = remaining / (2 * ratioHD + 2);
+            return { h: ratioHD * dNew, d: dNew };
+        }
+        function solveHT(dNew) {
+            const ratioHT = p.reflectionHighlightSize /
+                            Math.max(p.reflectionTransitionSize, 1e-6);
+            const remaining = 100 - 2 * dNew;
+            const tNew = remaining / (2 * ratioHT + 4);
+            return { h: ratioHT * tNew, t: tNew };
+        }
+        // ---------------------------------------------------------------------
+
+        // slider listeners ----------------------------------------------------
+        this.highlightPctSlider.addEventListener('input', e => {
+            const h = +e.target.value;
+            const { t } = solveTD(h);
+            p.reflectionHighlightSize  = h;
+            p.reflectionTransitionSize = t;
+            syncGradientUI();
+            this.renderCallback();
+        });
+
+        this.transitionPctSlider.addEventListener('input', e => {
+            const t = +e.target.value;
+            const { h } = solveHD(t);
+            p.reflectionHighlightSize  = h;
+            p.reflectionTransitionSize = t;
+            syncGradientUI();
+            this.renderCallback();
+        });
+
+        // dark percent is display-only; the slider element was removed,
+        // so add a listener only if it is present (e.g. older HTML)
+        if (this.darkPctSlider) {
+            this.darkPctSlider.addEventListener('input', e => {
+                const dEach = +e.target.value;
+                const { h, t } = solveHT(dEach);
+                p.reflectionHighlightSize  = h;
+                p.reflectionTransitionSize = t;
+                syncGradientUI();
+                this.renderCallback();
+            });
+        }
+
+        syncGradientUI();   // initial paint
+        /* ================================================== */
 
         // Image upload listener
         if (this.imageUpload) {
@@ -215,6 +311,58 @@ export class UIControls {
         this.setupSaveLoadHandlers();
         this.initializeTabs();
         console.log("UIControls initialization complete.");
+
+        // INITIAL call to update all three % labels
+        // first paint already done by updateReadout() above
+
+        /* ---------- gradient layout sliders --------------------- */
+        // duplicate helper calculators (DELETE)
+        /* ---------- duplicate helper calculators (DELETE) ----------
+        const solveTD = (hNew, tOld, dOld) => {
+            const ratio = tOld / dOld || 1;
+            const rhs   = 100 - 2 * hNew;
+            const dNew  = rhs / (4 * ratio + 2);
+            return { t: ratio * dNew, d: dNew };
+        };
+
+        const solveHD = (tNew, hOld, dOld) => {
+            const ratio = hOld / dOld || 1;
+            const rhs   = 100 - 4 * tNew;
+            const dNew  = rhs / (2 * ratio + 2);
+            return { h: ratio * dNew, d: dNew };
+        };
+
+        const solveHT = (dNew, hOld, tOld) => {
+            const ratio = hOld / tOld || 1;
+            const rhs   = 100 - 2 * dNew;
+            const tNew  = rhs / (2 * ratio + 4);
+            return { h: ratio * tNew, t: tNew };
+        };
+        //------------------------------------------------------------*/
+
+        this.highlightPctSlider.addEventListener('input', e => {
+            const h = +e.target.value;
+            const { t, d } = solveTD(h, p.reflectionTransitionSize, 100 - 2 * p.reflectionHighlightSize - 4 * p.reflectionTransitionSize >> 1);
+            p.reflectionHighlightSize  = h;
+            p.reflectionTransitionSize = t;
+            syncGradientUI();
+            this.renderCallback();
+        });
+
+        this.transitionPctSlider.addEventListener('input', e => {
+            const t = +e.target.value;
+            const { h, d } = solveHD(t, p.reflectionHighlightSize, 100 - 2 * p.reflectionHighlightSize - 4 * p.reflectionTransitionSize >> 1);
+            p.reflectionHighlightSize  = h;
+            p.reflectionTransitionSize = t;
+            syncGradientUI();
+            this.renderCallback();
+        });
+
+        // (dark percent is display-only now, no slider listener)
+        // ---------------------------------------------------------------------
+
+        // Gradient labels already synchronised by syncGradientUI()
+        /* --------------------------------------------------------- */
     }
 
     setupSaveLoadHandlers() {
@@ -638,4 +786,13 @@ export class UIControls {
             }
         }
     }
-}
+
+    updateReflectionDerived(labelElem, params) {
+        // exit quietly if the label is not in the DOM
+        if (!labelElem) { return; }
+
+        const h = params.reflectionHighlightSize;
+        const t = params.reflectionTransitionSize;
+        const used = 2 * h + 4 * t;
+        const d   = Math.max(0, (100 - used) / 2);
+        labelElem.textContent = d.toFixed(0);    }}

@@ -176,38 +176,37 @@
                 <input type="range" id="reflectionStartAngleSlider" min="0" max="360" step="1" value="0">
             </div>
 
-            <hr class="separator">
-            <h4>Gradient Stop Positions (%)</h4>
+            <div class="control-group">
+                <label for="reflectionOverlayOpacitySlider">
+                    Overlay Opacity: <span id="reflectionOverlayOpacityValue"></span>
+                </label>
+                <input type="range" id="reflectionOverlayOpacitySlider" min="0" max="1" step="0.01" value="0.8">
+            </div>
 
-            <!-- Seven stop sliders -->
+            <hr class="separator">
+            <h4>Gradient Layout (%)</h4>
+
+            <!-- Highlight % (2h) -->
             <div class="control-group">
-                <label for="reflectionStop1Slider">Stop 1: <span id="reflectionStop1Value"></span>%</label>
-                <input type="range" id="reflectionStop1Slider" min="0"  max="100" step="1"  value="0">
+                <label for="highlightPctSlider">
+                    Highlight 2h: <span id="highlightPctVal"></span> %
+                </label>
+                <input type="range" id="highlightPctSlider"  min="0" max="50" step="1">
             </div>
+
+            <!-- Transition % (4t) -->
             <div class="control-group">
-                <label for="reflectionStop2Slider">Stop 2: <span id="reflectionStop2Value"></span>%</label>
-                <input type="range" id="reflectionStop2Slider" min="0"  max="100" step="1"  value="10">
+                <label for="transitionPctSlider">
+                    Transition 4t: <span id="transitionPctVal"></span> %
+                </label>
+                <input type="range" id="transitionPctSlider" min="0" max="50" step="1">
             </div>
+
+            <!-- Dark-zone display only -->
             <div class="control-group">
-                <label for="reflectionStop3Slider">Stop 3: <span id="reflectionStop3Value"></span>%</label>
-                <input type="range" id="reflectionStop3Slider" min="0"  max="100" step="1"  value="40">
+                <label>Dark 2d: <span id="darkPctVal">--</span> %</label>
             </div>
-            <div class="control-group">
-                <label for="reflectionStop4Slider">Stop 4: <span id="reflectionStop4Value"></span>%</label>
-                <input type="range" id="reflectionStop4Slider" min="0"  max="100" step="1"  value="50">
-            </div>
-            <div class="control-group">
-                <label for="reflectionStop5Slider">Stop 5: <span id="reflectionStop5Value"></span>%</label>
-                <input type="range" id="reflectionStop5Slider" min="0"  max="100" step="1"  value="60">
-            </div>
-            <div class="control-group">
-                <label for="reflectionStop6Slider">Stop 6: <span id="reflectionStop6Value"></span>%</label>
-                <input type="range" id="reflectionStop6Slider" min="0"  max="100" step="1"  value="90">
-            </div>
-            <div class="control-group">
-                <label for="reflectionStop7Slider">Stop 7: <span id="reflectionStop7Value"></span>%</label>
-                <input type="range" id="reflectionStop7Slider" min="0"  max="100" step="1"  value="100">
-            </div>
+
         </div>
     </div>
 
@@ -253,4 +252,8 @@
 
     <script type="module" src="js/main.js"></script>
 </body>
+</html>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
 </html>

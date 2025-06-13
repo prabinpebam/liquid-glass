@@ -42,8 +42,12 @@ export default class ReflectionBorder {
         ctx.save();
         ctx.scale(dpr, dpr);
 
+        // ---------- NEW : global alpha ---------------------------------
+        ctx.globalAlpha = ('opacity' in p) ? p.opacity : 1.0;
+        // ---------------------------------------------------------------
+
         // Clear previous frame
-        ctx.clearRect(0, 0, this.canvas.width/dpr, this.canvas.height/dpr);
+        ctx.clearRect(0, 0, this.canvas.width / dpr, this.canvas.height / dpr);
 
         // Build gradient running along the perimeter (conic)
         const rotRad = (p.rotationOffsetDeg || 0) * Math.PI / 180;
@@ -55,13 +59,15 @@ export default class ReflectionBorder {
 
         const stops = (p.stopPositions || this._defaultStops);
         const colors = [
-            'rgba(255,255,255,0)',
-            'rgba(255,255,255,1)',
-            'rgba(255,255,255,1)',
-            'rgba(255,255,255,0)',
-            'rgba(255,255,255,1)',
-            'rgba(255,255,255,1)',
-            'rgba(255,255,255,0)'
+            'rgba(255,255,255,0)', // 0  (dark)
+            'rgba(255,255,255,0)', // 1  (dark end)
+            'rgba(255,255,255,1)', // 2  highlight start
+            'rgba(255,255,255,1)', // 3  highlight end
+            'rgba(255,255,255,0)', // 4  transition-down end
+            'rgba(255,255,255,0)', // 5  dark2 end
+            'rgba(255,255,255,1)', // 6  highlight2 start
+            'rgba(255,255,255,1)', // 7  highlight2 end
+            'rgba(255,255,255,0)'  // 8  loops back – transparent
         ];
         for (let i = 0; i < colors.length; i++) {
             grad.addColorStop(stops[i], colors[i]);

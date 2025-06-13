@@ -65,7 +65,12 @@ class LiquidGlassApp {
             reflectionStop4: 50,
             reflectionStop5: 60,
             reflectionStop6: 90,
-            reflectionStop7: 100
+            reflectionStop7: 100,
+
+            // NEW PARAMETERS FOR REFLECTION OVERLAY
+            reflectionOverlayOpacity: 0.8,
+            reflectionHighlightSize:  10,
+            reflectionTransitionSize: 15
         };
         
         this.backgroundImagesData = [];
@@ -353,63 +358,73 @@ class LiquidGlassApp {
     drawReflectionBorder() {
         if (!this.reflectionRenderer) return;
 
-        // --- effective radius (shader also clamps, we stop 1 px earlier) ----
-        const halfShortSide = 0.5 * Math.min(
-            this.liquidGlassParams.rectangleWidth,
-            this.liquidGlassParams.rectangleHeight
-        );
-
-        // stay at least 1 px below the “perfect circle” limit
-        const circleGuard = 1.0;
-        const effectiveCornerRadius = Math.min(
+        /* ---------- effective corner radius (unchanged) ---------- */
+        const halfShortSide   = 0.5 * Math.min(this.liquidGlassParams.rectangleWidth,
+                                               this.liquidGlassParams.rectangleHeight);
+        const circleGuard     = 1.0;
+        const effectiveRadius = Math.min(
             this.liquidGlassParams.rectangleCornerRadius,
             Math.max(0, halfShortSide - circleGuard)
         );
-        // ---------------------------------------------------------------------
 
-        // ----- DEBUG LOG ------------------------------------------------------
-        const borderR = Math.max(
+        /* ---------- derive gradient stops from 2h / 4t ----------- */
+        let h = this.liquidGlassParams.reflectionHighlightSize;   // each highlight
+        let t = this.liquidGlassParams.reflectionTransitionSize;  // each transition
+
+        /* keep percentages legal: 2h + 4t <= 100  */
+        const maxAllowed = 100;
+        const used       = 2 * h + 4 * t;
+        if (used > maxAllowed) {
+            const scale = maxAllowed / used;
+            h *= scale;
+            t *= scale;
+        }
+        const d = (maxAllowed - 2 * h - 4 * t) / 2;               // each dark zone
+
+        const stopsPct = [
             0,
-            effectiveCornerRadius - this.liquidGlassParams.reflectionBorderOffset
-        );
-        if (effectiveCornerRadius !== this._lastShapeR || borderR !== this._lastBorderR) {
-            console.log(`[CornerRadius] shape=${effectiveCornerRadius.toFixed(2)}  border=${borderR.toFixed(2)}`);
-            this._lastShapeR  = effectiveCornerRadius;
+            d,
+            d + t,
+            d + t + h,
+            d + t + h + t,
+            d + t + h + t + d,
+            d + t + h + t + d + t,
+            d + t + h + t + d + t + h,
+            100
+        ];
+        const stops = stopsPct.map(v => v / 100);
+
+        /* ---------- debug print ---------------------------------- */
+        const borderR = Math.max(0, effectiveRadius - this.liquidGlassParams.reflectionBorderOffset);
+        if (effectiveRadius !== this._lastShapeR || borderR !== this._lastBorderR) {
+            console.log(`[CornerRadius] shape=${effectiveRadius.toFixed(2)}  border=${borderR.toFixed(2)}`);
+            this._lastShapeR  = effectiveRadius;
             this._lastBorderR = borderR;
         }
-        // ---------------------------------------------------------------------
+        /* ---------------------------------------------------------- */
 
         if (!this.liquidGlassParams.enableReflection) {
-            this.reflectionRenderer.ctx.clearRect(
-                0, 0, this.reflectionOverlay.width, this.reflectionOverlay.height
-            );
+            this.reflectionRenderer.ctx.clearRect(0, 0,
+                this.reflectionOverlay.width, this.reflectionOverlay.height);
             return;
         }
 
         this.reflectionRenderer.draw({
             center: {
                 x: this.positions.liquidGlassCenterPosition.x,
-                // flip Y (GL → 2D canvas)
                 y: this.canvas.height - this.positions.liquidGlassCenterPosition.y
             },
             size: {
                 w: this.liquidGlassParams.rectangleWidth,
                 h: this.liquidGlassParams.rectangleHeight
             },
-            cornerRadius: effectiveCornerRadius,         // ← use clamped value
+            cornerRadius: effectiveRadius,
             thickness:    this.liquidGlassParams.reflectionBorderThickness,
             blur:         this.liquidGlassParams.reflectionBorderBlur,
             offset:       this.liquidGlassParams.reflectionBorderOffset,
             rotationOffsetDeg: this.liquidGlassParams.reflectionStartAngle,
-            stopPositions: [
-                this.liquidGlassParams.reflectionStop1 / 100,
-                this.liquidGlassParams.reflectionStop2 / 100,
-                this.liquidGlassParams.reflectionStop3 / 100,
-                this.liquidGlassParams.reflectionStop4 / 100,
-                this.liquidGlassParams.reflectionStop5 / 100,
-                this.liquidGlassParams.reflectionStop6 / 100,
-                this.liquidGlassParams.reflectionStop7 / 100
-            ]
+            stopPositions: stops,                    // ← derived stops
+            opacity: this.liquidGlassParams.reflectionOverlayOpacity
         });
     }
     /* ------------------------- */
