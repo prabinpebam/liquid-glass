@@ -80,6 +80,12 @@ export const fragmentShaderSource = `
     uniform float u_gridControlsCornerRadius;
     uniform float u_gridControlsDistortionThickness;
 
+    // Drop Shadow
+    uniform float u_dropShadowBlur;
+    uniform float u_dropShadowOffsetX;
+    uniform float u_dropShadowOffsetY;
+    uniform float u_dropShadowOpacity;
+
     /**
      * Signed Distance Function for rounded rectangles
      * Used for all liquid glass shapes
@@ -116,6 +122,24 @@ export const fragmentShaderSource = `
         return smoothstep(0.0, blur, sdfVal);
     }
 
+
+    /**
+     * Calculates outer (drop) shadow intensity.
+     * Entire silhouette is dark; blur soft-edges outward.
+     */
+    float getOuterShadowIntensity(vec2 p, vec2 shapeSize, float shapeCornerRadius,
+                                  float offsetX, float offsetY, float blur) {
+        /* offset direction = slider direction (positive → move that way) */
+        vec2 queryPoint = p - vec2(offsetX, offsetY);
+
+        float sdfVal = sdRoundedBox(queryPoint, shapeSize, shapeCornerRadius);
+
+        /* inside silhouette → full shadow */
+        if (sdfVal <= 0.0) return 1.0;
+
+        /* fade to 0 over <blur> pixels */
+        return 1.0 - smoothstep(0.0, blur, sdfVal);
+    }
 
     /**
      * Renders the background with grid, images, and base color
@@ -472,9 +496,27 @@ export const fragmentShaderSource = `
             }
 
             finalColor.rgb = clamp(finalColor.rgb, 0.0, 1.0);
-
-
         }
+
+        /* ---------- drop shadow – plain black silhouette with mask ---------- */
+        if (u_dropShadowOpacity > 0.0 && u_dropShadowBlur > 0.0) {
+            float dropShadow = getOuterShadowIntensity(
+                relativeToLiquidGlassCenter,
+                u_rectangleSize * 0.5,
+                cornerRadius,
+                u_dropShadowOffsetX,
+                u_dropShadowOffsetY,
+                u_dropShadowBlur
+            );
+
+            /*  Mask: suppress shadow that falls inside the *current* main shape  */
+            if (distanceMetric <= 0.0) {          // inside original glass
+                dropShadow = 0.0;
+            }
+
+            finalColor.rgb = mix(finalColor.rgb, vec3(0.0), dropShadow * u_dropShadowOpacity);
+        }
+
         gl_FragColor = finalColor;
     }
 `;

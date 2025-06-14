@@ -1,4 +1,5 @@
 import { ConfigManager } from './config-manager.js';
+import { ShadowControls } from './shadow-controls.js';   // keep
 // IMPORTANT: You need to include the noUiSlider library in your project for this to work.
 // e.g., <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
 // and its CSS: <link href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css" rel="stylesheet">
@@ -123,6 +124,15 @@ export class UIControls {
         console.log("UIControls initializing...");
         const p = this.liquidGlassParams;   // ← single, authoritative alias
 
+        // ─── NEW: create modular shadow controls ───
+        this.shadowControls = new ShadowControls(
+            this.liquidGlassParams,
+            this.configManager,
+            this.renderCallback
+        );
+        this.shadowControls.initialize();
+        // ───────────────────────────────────────────
+
         // Main Glass Shape Sliders
         this.setupSlider(this.rectWidthSlider, this.rectWidthValue, 'rectangleWidth', 0, 'px');
         this.setupSlider(this.rectHeightSlider, this.rectHeightValue, 'rectangleHeight', 0, 'px');
@@ -220,8 +230,8 @@ export class UIControls {
 
         // helper calculators --------------------------------------------------
         function solveTD(hNew) { ... } // Removed
-        function solveHD(tNew) { ... } // Removed
-        function solveHT(dNew) { ... } // Removed
+        function solveHD(tNew, hOld, dOld) { ... } // Removed
+        function solveHT(dNew, hOld, tOld) { ... } // Removed
         // ---------------------------------------------------------------------
 
         // slider listeners ----------------------------------------------------
@@ -242,7 +252,6 @@ export class UIControls {
         }
 
         // syncGradientUI();   // initial paint // Removed
-        */
         /* ================================================== */
 
         // Initialize NEW dual-thumb gradient slider (noUiSlider)
@@ -860,3 +869,5 @@ export class UIControls {
         // labelElem.textContent = (d * 2).toFixed(0); // Example if it were for 2d
     }
 }
+
+/* ------- Shadow controls (modular) ------- */

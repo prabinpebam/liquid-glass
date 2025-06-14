@@ -73,7 +73,13 @@ class LiquidGlassApp {
             // NEW PARAMETERS FOR REFLECTION OVERLAY
             reflectionOverlayOpacity: 0.8,
             reflectionHighlightSize:  10, // This is 'h'
-            reflectionTransitionSize: 15  // This is 't'
+            reflectionTransitionSize: 15, // This is 't'
+
+            // Drop Shadow (NEW)
+            dropShadowBlur:    20,
+            dropShadowOffsetX: 0,
+            dropShadowOffsetY: -10,
+            dropShadowOpacity: 0.5
         };
         
         this.backgroundImagesData = [];
@@ -434,7 +440,7 @@ class LiquidGlassApp {
 
     setUniforms() {
         const gl = this.gl;
-        const u = this.uniformLocations;
+        const u  = this.uniformLocations;
         
         // Basic scene uniforms
         gl.uniform2f(u.resolution, this.canvas.width, this.canvas.height);
@@ -539,6 +545,18 @@ class LiquidGlassApp {
         // gl.uniform1f(u.reflectionStop5, this.liquidGlassParams.reflectionStop5); // Removed
         // gl.uniform1f(u.reflectionStop6, this.liquidGlassParams.reflectionStop6); // Removed
         // gl.uniform1f(u.reflectionStop7, this.liquidGlassParams.reflectionStop7); // Removed
+
+        // ------- Drop-shadow uniforms (lazy lookup) -------
+        if (!u.dropShadowBlur) {
+            u.dropShadowBlur    = gl.getUniformLocation(this.program, 'u_dropShadowBlur');
+            u.dropShadowOffsetX = gl.getUniformLocation(this.program, 'u_dropShadowOffsetX');
+            u.dropShadowOffsetY = gl.getUniformLocation(this.program, 'u_dropShadowOffsetY');
+            u.dropShadowOpacity = gl.getUniformLocation(this.program, 'u_dropShadowOpacity');
+        }
+        gl.uniform1f(u.dropShadowBlur,    this.liquidGlassParams.dropShadowBlur);
+        gl.uniform1f(u.dropShadowOffsetX, this.liquidGlassParams.dropShadowOffsetX);
+        gl.uniform1f(u.dropShadowOffsetY, this.liquidGlassParams.dropShadowOffsetY);
+        gl.uniform1f(u.dropShadowOpacity, this.liquidGlassParams.dropShadowOpacity);
     }
 }
 

@@ -36,7 +36,8 @@
             <button class="tab-pill active" data-tab-target="#tab-shape">Shape</button>
             <button class="tab-pill" data-tab-target="#tab-refraction">Refraction</button>
             <button class="tab-pill" data-tab-target="#tab-effects">Effects</button>
-            <button class="tab-pill" data-tab-target="#tab-reflections">Reflections</button> <!-- New Tab -->
+            <button class="tab-pill" data-tab-target="#tab-shadow">Shadow</button> <!-- NEW -->
+            <button class="tab-pill" data-tab-target="#tab-reflections">Reflections</button>
         </div>
 
         <div id="tab-shape" class="tab-panel active">
@@ -227,6 +228,26 @@
                 </div>
             </div>
 
+        </div>
+
+        <!-- ─── NEW SHADOW TAB ─── -->
+        <div id="tab-shadow" class="tab-panel">
+            <div class="control-group">
+                <label for="dropShadowBlurSlider">Blur: <span id="dropShadowBlurValue"></span>px</label>
+                <input type="range" id="dropShadowBlurSlider" min="0" max="100" step="1" value="20">
+            </div>
+            <div class="control-group">
+                <label for="dropShadowOffsetXSlider">X Offset: <span id="dropShadowOffsetXValue"></span>px</label>
+                <input type="range" id="dropShadowOffsetXSlider" min="-100" max="100" step="1" value="0">
+            </div>
+            <div class="control-group">
+                <label for="dropShadowOffsetYSlider">Y Offset: <span id="dropShadowOffsetYValue"></span>px</label>
+                <input type="range" id="dropShadowOffsetYSlider" min="-100" max="100" step="1" value="-10">
+            </div>
+            <div class="control-group">
+                <label for="dropShadowOpacitySlider">Opacity: <span id="dropShadowOpacityValue"></span></label>
+                <input type="range" id="dropShadowOpacitySlider" min="0" max="1" step="0.01" value="0.5">
+            </div>
         </div>
     </div>
 
