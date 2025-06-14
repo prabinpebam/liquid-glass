@@ -251,11 +251,21 @@ export class ConfigManager {
             
             // Reflections
             enableReflection: this.liquidGlassParams.enableReflection,
-            reflectionArcDegrees: this.liquidGlassParams.reflectionArcDegrees,
-            reflectionThickness: this.liquidGlassParams.reflectionThickness,
-            reflectionOffset: this.liquidGlassParams.reflectionOffset,
-            reflectionOpacity: this.liquidGlassParams.reflectionOpacity,
-            reflectionArcPositionOffset: this.liquidGlassParams.reflectionArcPositionOffset,
+            // REMOVE Legacy reflection parameters
+            // reflectionArcDegrees: this.liquidGlassParams.reflectionArcDegrees,
+            // reflectionThickness: this.liquidGlassParams.reflectionThickness,
+            // reflectionOffset: this.liquidGlassParams.reflectionOffset,
+            // reflectionOpacity: this.liquidGlassParams.reflectionOpacity,
+            // reflectionArcPositionOffset: this.liquidGlassParams.reflectionArcPositionOffset,
+
+            // ADD New reflection parameters
+            reflectionBorderThickness: this.liquidGlassParams.reflectionBorderThickness,
+            reflectionBorderBlur: this.liquidGlassParams.reflectionBorderBlur,
+            reflectionBorderOffset: this.liquidGlassParams.reflectionBorderOffset,
+            reflectionStartAngle: this.liquidGlassParams.reflectionStartAngle,
+            reflectionOverlayOpacity: this.liquidGlassParams.reflectionOverlayOpacity,
+            reflectionHighlightSize: this.liquidGlassParams.reflectionHighlightSize,
+            reflectionTransitionSize: this.liquidGlassParams.reflectionTransitionSize,
             
             // Grid
             showGrid: this.liquidGlassParams.showGrid,
@@ -395,11 +405,20 @@ export class ConfigManager {
             { param: 'bottomGlowOffsetX', slider: 'bottomGlowOffsetXSlider', value: 'bottomGlowOffsetXValue', unit: 'px' },
             { param: 'bottomGlowOffsetY', slider: 'bottomGlowOffsetYSlider', value: 'bottomGlowOffsetYValue', unit: 'px' },
             { param: 'bottomGlowOpacity', slider: 'bottomGlowOpacitySlider', value: 'bottomGlowOpacityValue' },
-            { param: 'reflectionArcDegrees', slider: 'reflectionArcDegreesSlider', value: 'reflectionArcDegreesValue', unit: '°' },
-            { param: 'reflectionThickness', slider: 'reflectionThicknessSlider', value: 'reflectionThicknessValue', unit: 'px' },
-            { param: 'reflectionOffset', slider: 'reflectionOffsetSlider', value: 'reflectionOffsetValue', unit: 'px' },
-            { param: 'reflectionOpacity', slider: 'reflectionOpacitySlider', value: 'reflectionOpacityValue', unit: '%' },
-            { param: 'reflectionArcPositionOffset', slider: 'reflectionArcPositionOffsetSlider', value: 'reflectionArcPositionOffsetValue', unit: '°' },
+            // REMOVE Legacy reflection slider mappings
+            // { param: 'reflectionArcDegrees', slider: 'reflectionArcDegreesSlider', value: 'reflectionArcDegreesValue', unit: '°' },
+            // { param: 'reflectionThickness', slider: 'reflectionThicknessSlider', value: 'reflectionThicknessValue', unit: 'px' },
+            // { param: 'reflectionOffset', slider: 'reflectionOffsetSlider', value: 'reflectionOffsetValue', unit: 'px' },
+            // { param: 'reflectionOpacity', slider: 'reflectionOpacitySlider', value: 'reflectionOpacityValue', unit: '%' },
+            // { param: 'reflectionArcPositionOffset', slider: 'reflectionArcPositionOffsetSlider', value: 'reflectionArcPositionOffsetValue', unit: '°' },
+            
+            // ADD New reflection slider mappings
+            { param: 'reflectionBorderThickness', slider: 'reflectionBorderThicknessSlider', value: 'reflectionBorderThicknessValue', unit: 'px' },
+            { param: 'reflectionBorderBlur', slider: 'reflectionBorderBlurSlider', value: 'reflectionBorderBlurValue', unit: 'px' }, // Assuming 1 decimal for blur
+            { param: 'reflectionBorderOffset', slider: 'reflectionBorderOffsetSlider', value: 'reflectionBorderOffsetValue', unit: 'px' },
+            { param: 'reflectionStartAngle', slider: 'reflectionStartAngleSlider', value: 'reflectionStartAngleValue', unit: '°' },
+            { param: 'reflectionOverlayOpacity', slider: 'reflectionOverlayOpacitySlider', value: 'reflectionOverlayOpacityValue' }, // Assuming 2 decimals for opacity
+
             { param: 'gridSpacing', slider: 'gridSpacingSlider', value: null }
         ];
 
@@ -413,7 +432,8 @@ export class ConfigManager {
                 
                 if (valueElement) {
                     const precision = mapping.param.includes('Opacity') || mapping.param === 'frostiness' ? 2 : 
-                                    mapping.param.includes('Alpha') ? 2 : 0;
+                                    mapping.param.includes('Alpha') ? 2 : 
+                                    mapping.param === 'reflectionBorderBlur' ? 1 : 0; // Added precision for blur
                     valueElement.textContent = parseFloat(value).toFixed(precision) + (mapping.unit || '');
                 }
             }
@@ -440,6 +460,43 @@ export class ConfigManager {
 
         if (this.uiControls.gridToggle) {
             this.uiControls.gridToggle.checked = currentConfig.showGrid;
+        }
+
+        // Update the noUiSlider for reflection gradient
+        if (this.uiControls.gradientSlider && this.uiControls.gradientSlider.noUiSlider) {
+            const hParam = currentConfig.reflectionHighlightSize; // This is h
+            const tParam = currentConfig.reflectionTransitionSize; // This is t
+            
+            // Ensure values are consistent before setting slider
+            if (hParam !== undefined && tParam !== undefined) { // Check if params exist
+                let val2h = hParam * 2;
+                let val4t = tParam * 4;
+
+                if (val2h + val4t > 100) {
+                    const scale = 100 / (val2h + val4t);
+                    val2h *= scale;
+                    val4t *= scale;
+                }
+                val2h = Math.min(val2h, 100);
+                val4t = Math.min(val4t, 100 - val2h);
+
+                const sliderVal1 = val2h;
+                const sliderVal2 = val2h + val4t;
+
+                this.uiControls.gradientSlider.noUiSlider.set([sliderVal1, sliderVal2]);
+                
+                const val2d = 100 - sliderVal2;
+                if (this.uiControls.gradientHVal) this.uiControls.gradientHVal.textContent = val2h.toFixed(0);
+                if (this.uiControls.gradientTVal) this.uiControls.gradientTVal.textContent = val4t.toFixed(0);
+                if (this.uiControls.gradientDVal) this.uiControls.gradientDVal.textContent = val2d.toFixed(0);
+            } else {
+                // Handle case where highlight/transition size might be missing from an old config
+                // Set slider to a default state, e.g., 0, 0 or a predefined default
+                this.uiControls.gradientSlider.noUiSlider.set([0, 0]);
+                if (this.uiControls.gradientHVal) this.uiControls.gradientHVal.textContent = '0';
+                if (this.uiControls.gradientTVal) this.uiControls.gradientTVal.textContent = '0';
+                if (this.uiControls.gradientDVal) this.uiControls.gradientDVal.textContent = '100';
+            }
         }
     }
 

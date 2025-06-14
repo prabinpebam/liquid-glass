@@ -61,6 +61,13 @@ export const fragmentShaderSource = `
     uniform float u_controlPanelCornerRadius;
     uniform float u_controlPanelDistortionThickness;
 
+    // Remove Legacy Reflection Uniforms
+    // uniform float u_reflectionArcDegrees;
+    // uniform float u_reflectionThickness;
+    // uniform float u_reflectionOffset;
+    // uniform float u_reflectionOpacity;
+    // uniform float u_reflectionArcPositionOffset;
+
     // Add Image Button (also uses liquid glass effect)
     uniform vec2 u_addImageButtonCenter;
     uniform vec2 u_addImageButtonSize;

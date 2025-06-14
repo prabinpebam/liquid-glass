@@ -46,11 +46,13 @@ class LiquidGlassApp {
 
             // Reflection
             enableReflection: false,
-            reflectionArcDegrees: 120.0,
-            reflectionThickness: 20.0,
-            reflectionOpacity: 40.0,
-            reflectionArcPositionOffset: 0.0,
-            reflectionOffset: 5.0,
+            // Removed legacy arc-based reflection params
+            // reflectionArcDegrees: 120.0,
+            // reflectionThickness: 20.0,
+            // reflectionOpacity: 40.0,
+            // reflectionArcPositionOffset: 0.0,
+            // reflectionOffset: 5.0
+
 
             // ─── NEW BORDER-REFLECTION PARAMETERS ───
             reflectionBorderThickness: 8,   // px
@@ -58,19 +60,20 @@ class LiquidGlassApp {
             reflectionBorderOffset:     6,  // px   inside shape
             reflectionStartAngle:       0,  // deg (0-360)
 
+            // Removed individual reflectionStop1-7, as they are derived
             // gradient stop positions (percent 0-100)
-            reflectionStop1: 0,
-            reflectionStop2: 10,
-            reflectionStop3: 40,
-            reflectionStop4: 50,
-            reflectionStop5: 60,
-            reflectionStop6: 90,
-            reflectionStop7: 100,
+            // reflectionStop1: 0, // Removed
+            // reflectionStop2: 10, // Removed
+            // reflectionStop3: 40, // Removed
+            // reflectionStop4: 50, // Removed
+            // reflectionStop5: 60, // Removed
+            // reflectionStop6: 90, // Removed
+            // reflectionStop7: 100, // Removed
 
             // NEW PARAMETERS FOR REFLECTION OVERLAY
             reflectionOverlayOpacity: 0.8,
-            reflectionHighlightSize:  10,
-            reflectionTransitionSize: 15
+            reflectionHighlightSize:  10, // This is 'h'
+            reflectionTransitionSize: 15  // This is 't'
         };
         
         this.backgroundImagesData = [];
@@ -516,24 +519,26 @@ class LiquidGlassApp {
 
         // Reflection
         gl.uniform1i(u.enableReflection, this.liquidGlassParams.enableReflection);
-        gl.uniform1f(u.reflectionArcDegrees, this.liquidGlassParams.reflectionArcDegrees);
-        gl.uniform1f(u.reflectionThickness, this.liquidGlassParams.reflectionThickness);
-        gl.uniform1f(u.reflectionOffset, this.liquidGlassParams.reflectionOffset);
-        gl.uniform1f(u.reflectionOpacity, this.liquidGlassParams.reflectionOpacity);
-        gl.uniform1f(u.reflectionArcPositionOffset, this.liquidGlassParams.reflectionArcPositionOffset);
+        // Remove legacy reflection uniform settings
+        // gl.uniform1f(u.reflectionArcDegrees, this.liquidGlassParams.reflectionArcDegrees);
+        // gl.uniform1f(u.reflectionThickness, this.liquidGlassParams.reflectionThickness);
+        // gl.uniform1f(u.reflectionOffset, this.liquidGlassParams.reflectionOffset);
+        // gl.uniform1f(u.reflectionOpacity, this.liquidGlassParams.reflectionOpacity);
+        // gl.uniform1f(u.reflectionArcPositionOffset, this.liquidGlassParams.reflectionArcPositionOffset);
 
         // Border Reflection
         gl.uniform1f(u.reflectionBorderThickness, this.liquidGlassParams.reflectionBorderThickness);
         gl.uniform1f(u.reflectionBorderBlur, this.liquidGlassParams.reflectionBorderBlur);
         gl.uniform1f(u.reflectionBorderOffset, this.liquidGlassParams.reflectionBorderOffset);
         gl.uniform1f(u.reflectionStartAngle, this.liquidGlassParams.reflectionStartAngle);
-        gl.uniform1f(u.reflectionStop1, this.liquidGlassParams.reflectionStop1);
-        gl.uniform1f(u.reflectionStop2, this.liquidGlassParams.reflectionStop2);
-        gl.uniform1f(u.reflectionStop3, this.liquidGlassParams.reflectionStop3);
-        gl.uniform1f(u.reflectionStop4, this.liquidGlassParams.reflectionStop4);
-        gl.uniform1f(u.reflectionStop5, this.liquidGlassParams.reflectionStop5);
-        gl.uniform1f(u.reflectionStop6, this.liquidGlassParams.reflectionStop6);
-        gl.uniform1f(u.reflectionStop7, this.liquidGlassParams.reflectionStop7);
+        // Removed u.reflectionStop1 to u.reflectionStop7 uniform settings
+        // gl.uniform1f(u.reflectionStop1, this.liquidGlassParams.reflectionStop1); // Removed
+        // gl.uniform1f(u.reflectionStop2, this.liquidGlassParams.reflectionStop2); // Removed
+        // gl.uniform1f(u.reflectionStop3, this.liquidGlassParams.reflectionStop3); // Removed
+        // gl.uniform1f(u.reflectionStop4, this.liquidGlassParams.reflectionStop4); // Removed
+        // gl.uniform1f(u.reflectionStop5, this.liquidGlassParams.reflectionStop5); // Removed
+        // gl.uniform1f(u.reflectionStop6, this.liquidGlassParams.reflectionStop6); // Removed
+        // gl.uniform1f(u.reflectionStop7, this.liquidGlassParams.reflectionStop7); // Removed
     }
 }
 

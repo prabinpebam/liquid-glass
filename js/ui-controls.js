@@ -1,4 +1,8 @@
 import { ConfigManager } from './config-manager.js';
+// IMPORTANT: You need to include the noUiSlider library in your project for this to work.
+// e.g., <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.js"></script>
+// and its CSS: <link href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.0/nouislider.min.css" rel="stylesheet">
+
 
 /**
  * UI Controls and Event Handling
@@ -75,10 +79,10 @@ export class UIControls {
         this.reflectionOverlayOpacityValue   = document.getElementById('reflectionOverlayOpacityValue');
         
         // NEW dual-thumb slider refs
-        this.gradientSlider = document.getElementById('reflectionGradientSlider');
-        this.gradientHVal   = document.getElementById('gradientHVal');
-        this.gradientTVal   = document.getElementById('gradientTVal');
-        this.gradientDVal   = document.getElementById('gradientDVal');
+        this.gradientSlider = document.getElementById('reflectionGradientSlider'); // This is the noUiSlider target
+        this.gradientHVal   = document.getElementById('gradientHVal'); // For 2h %
+        this.gradientTVal   = document.getElementById('gradientTVal'); // For 4t %
+        this.gradientDVal   = document.getElementById('gradientDVal'); // For 2d %
 
         // UI Elements for interaction handler / other functionalities
         this.controlPanel = document.getElementById('controls-pane');
@@ -104,13 +108,11 @@ export class UIControls {
         this.configList = document.getElementById('config-list');
         this.clearAllUserConfigsBtn = null; // Will be created if not in HTML
 
-        // NEW sliders for gradient layout
-        this.highlightPctSlider  = document.getElementById('highlightPctSlider');
-        this.highlightPctVal     = document.getElementById('highlightPctVal');
-        this.transitionPctSlider = document.getElementById('transitionPctSlider');
-        this.transitionPctVal    = document.getElementById('transitionPctVal');
-        // this.darkPctSlider       = document.getElementById('darkPctSlider');
-        // this.darkPctVal          = document.getElementById('darkPctVal');
+        // REMOVED old sliders for gradient layout
+        // this.highlightPctSlider  = document.getElementById('highlightPctSlider'); // Removed
+        // this.highlightPctVal     = document.getElementById('highlightPctVal'); // Removed
+        // this.transitionPctSlider = document.getElementById('transitionPctSlider'); // Removed
+        // this.transitionPctVal    = document.getElementById('transitionPctVal'); // Removed
     }
 
     setGL(gl) {
@@ -209,95 +211,107 @@ export class UIControls {
             2                    // show two decimals
         );
 
-        // --------- (obsolete noUiSlider block was here) ---------
-        // const p = this.liquidGlassParams;          // ← delete this line
-        /* (whole noUiSlider block already removed) */
-        // --------------------------------------------------------------
-
-        // the surviving three-slider logic further below already contains
-        //   const p = this.liquidGlassParams;
-        // so no name collision remains.
-
-        /* ========== Gradient layout (%) sliders ========== */
+        // REMOVE old gradient slider logic
+        /*
+        // ========== Gradient layout (%) sliders ========== 
 
         // ----- helper to refresh labels & slider thumbs -----
-        const syncGradientUI = () => {
-            const h = p.reflectionHighlightSize;
-            const t = p.reflectionTransitionSize;
-            const d = (100 - 2 * h - 4 * t) / 2;
-
-            /* update labels – check for null first */
-            if (this.highlightPctVal)  this.highlightPctVal.textContent  = h.toFixed(0);
-            if (this.transitionPctVal) this.transitionPctVal.textContent = t.toFixed(0);
-
-            const darkLbl = document.getElementById('darkPctVal');
-            if (darkLbl) darkLbl.textContent = d.toFixed(0);
-
-            /* update sliders – check for null (dark slider no longer exists) */
-            if (this.highlightPctSlider)  this.highlightPctSlider.value  = h;
-            if (this.transitionPctSlider) this.transitionPctSlider.value = t;
-        };
+        const syncGradientUI = () => { ... }; // Removed
 
         // helper calculators --------------------------------------------------
-        function solveTD(hNew) {
-            const dOld = (100 - 2 * p.reflectionHighlightSize -
-                               4 * p.reflectionTransitionSize) / 2;
-            const ratioTD = p.reflectionTransitionSize / Math.max(dOld, 1e-6);
-            const remaining = 100 - 2 * hNew;
-            const dNew = remaining / (4 * ratioTD + 2);
-            return { t: ratioTD * dNew, d: dNew };
-        }
-        function solveHD(tNew) {
-            const dOld = (100 - 2 * p.reflectionHighlightSize -
-                               4 * p.reflectionTransitionSize) / 2;
-            const ratioHD = p.reflectionHighlightSize / Math.max(dOld, 1e-6);
-            const remaining = 100 - 4 * tNew;
-            const dNew = remaining / (2 * ratioHD + 2);
-            return { h: ratioHD * dNew, d: dNew };
-        }
-        function solveHT(dNew) {
-            const ratioHT = p.reflectionHighlightSize /
-                            Math.max(p.reflectionTransitionSize, 1e-6);
-            const remaining = 100 - 2 * dNew;
-            const tNew = remaining / (2 * ratioHT + 4);
-            return { h: ratioHT * tNew, t: tNew };
-        }
+        function solveTD(hNew) { ... } // Removed
+        function solveHD(tNew) { ... } // Removed
+        function solveHT(dNew) { ... } // Removed
         // ---------------------------------------------------------------------
 
         // slider listeners ----------------------------------------------------
-        this.highlightPctSlider.addEventListener('input', e => {
-            const h = +e.target.value;
-            const { t } = solveTD(h);
-            p.reflectionHighlightSize  = h;
-            p.reflectionTransitionSize = t;
-            syncGradientUI();
-            this.renderCallback();
-        });
+        if (this.highlightPctSlider) { // Check added for safety, but elements are removed
+            this.highlightPctSlider.addEventListener('input', e => { ... }); // Removed
+        }
 
-        this.transitionPctSlider.addEventListener('input', e => {
-            const t = +e.target.value;
-            const { h } = solveHD(t);
-            p.reflectionHighlightSize  = h;
-            p.reflectionTransitionSize = t;
-            syncGradientUI();
-            this.renderCallback();
-        });
+
+        if (this.transitionPctSlider) { // Check added for safety
+            this.transitionPctSlider.addEventListener('input', e => { ... }); // Removed
+        }
+
 
         // dark percent is display-only; the slider element was removed,
         // so add a listener only if it is present (e.g. older HTML)
-        if (this.darkPctSlider) {
-            this.darkPctSlider.addEventListener('input', e => {
-                const dEach = +e.target.value;
-                const { h, t } = solveHT(dEach);
-                p.reflectionHighlightSize  = h;
-                p.reflectionTransitionSize = t;
-                syncGradientUI();
-                this.renderCallback();
-            });
+        if (this.darkPctSlider) { // This was already commented out or removed
+            // ...
         }
 
-        syncGradientUI();   // initial paint
+        // syncGradientUI();   // initial paint // Removed
+        */
         /* ================================================== */
+
+        // Initialize NEW dual-thumb gradient slider (noUiSlider)
+        if (this.gradientSlider && typeof noUiSlider !== 'undefined') {
+            const initialH = p.reflectionHighlightSize; // This is h
+            const initialT = p.reflectionTransitionSize; // This is t
+
+            let initial2h = initialH * 2;
+            let initial4t = initialT * 4;
+
+            // Ensure initial values are within valid sum (<= 100)
+            if (initial2h + initial4t > 100) {
+                const scale = 100 / (initial2h + initial4t);
+                initial2h *= scale;
+                initial4t *= scale;
+            }
+            
+            // Ensure individual components are not too large if the other is zero
+            initial2h = Math.min(initial2h, 100);
+            initial4t = Math.min(initial4t, 100 - initial2h);
+
+
+            noUiSlider.create(this.gradientSlider, {
+                start: [initial2h, initial2h + initial4t], // Positions of the two thumbs
+                connect: [true, true, true], // Connects segments: left, middle, right
+                range: {
+                    'min': 0,
+                    'max': 100
+                },
+                step: 1,
+                tooltips: false, // We use separate labels
+                behaviour: 'drag'
+            });
+
+            this.gradientSlider.noUiSlider.on('update', (values, handle) => {
+                const v1 = parseFloat(values[0]);
+                const v2 = parseFloat(values[1]);
+
+                const val2h = v1;
+                const val4t = v2 - v1;
+                const val2d = 100 - v2;
+
+                // Update liquidGlassParams
+                p.reflectionHighlightSize = Math.max(0, val2h / 2.0);
+                p.reflectionTransitionSize = Math.max(0, val4t / 4.0);
+
+                // Update readout labels
+                if (this.gradientHVal) this.gradientHVal.textContent = val2h.toFixed(0);
+                if (this.gradientTVal) this.gradientTVal.textContent = val4t.toFixed(0);
+                if (this.gradientDVal) this.gradientDVal.textContent = val2d.toFixed(0);
+                
+                this.configManager.saveCurrentState();
+                this.renderCallback();
+            });
+            
+            // Initial update of labels from params
+            const current2h = p.reflectionHighlightSize * 2;
+            const current4t = p.reflectionTransitionSize * 4;
+            const current2d = 100 - (current2h + current4t);
+            if (this.gradientHVal) this.gradientHVal.textContent = current2h.toFixed(0);
+            if (this.gradientTVal) this.gradientTVal.textContent = current4t.toFixed(0);
+            if (this.gradientDVal) this.gradientDVal.textContent = current2d.toFixed(0);
+
+        } else if (!this.gradientSlider) {
+            console.warn("reflectionGradientSlider element not found.");
+        } else if (typeof noUiSlider === 'undefined') {
+            console.warn("noUiSlider library is not loaded. Gradient slider will not work.");
+        }
+
 
         // Image upload listener
         if (this.imageUpload) {
@@ -317,52 +331,28 @@ export class UIControls {
         // first paint already done by updateReadout() above
 
         /* ---------- gradient layout sliders --------------------- */
-        // duplicate helper calculators (DELETE)
+        // REMOVE duplicate helper calculators (DELETE)
         /* ---------- duplicate helper calculators (DELETE) ----------
-        const solveTD = (hNew, tOld, dOld) => {
-            const ratio = tOld / dOld || 1;
-            const rhs   = 100 - 2 * hNew;
-            const dNew  = rhs / (4 * ratio + 2);
-            return { t: ratio * dNew, d: dNew };
-        };
-
-        const solveHD = (tNew, hOld, dOld) => {
-            const ratio = hOld / dOld || 1;
-            const rhs   = 100 - 4 * tNew;
-            const dNew  = rhs / (2 * ratio + 2);
-            return { h: ratio * dNew, d: dNew };
-        };
-
-        const solveHT = (dNew, hOld, tOld) => {
-            const ratio = hOld / tOld || 1;
-            const rhs   = 100 - 2 * dNew;
-            const tNew  = rhs / (2 * ratio + 4);
-            return { h: ratio * tNew, t: tNew };
-        };
+        const solveTD = (hNew, tOld, dOld) => { ... }; // Removed
+        const solveHD = (tNew, hOld, dOld) => { ... }; // Removed
+        const solveHT = (dNew, hOld, tOld) => { ... }; // Removed
         //------------------------------------------------------------*/
+        
+        // REMOVE event listeners for old sliders
+        /*
+        if (this.highlightPctSlider) {
+             this.highlightPctSlider.addEventListener('input', e => { ... }); // Removed
+        }
+        if (this.transitionPctSlider) {
+            this.transitionPctSlider.addEventListener('input', e => { ... }); // Removed
+        }
+        */
 
-        this.highlightPctSlider.addEventListener('input', e => {
-            const h = +e.target.value;
-            const { t, d } = solveTD(h, p.reflectionTransitionSize, 100 - 2 * p.reflectionHighlightSize - 4 * p.reflectionTransitionSize >> 1);
-            p.reflectionHighlightSize  = h;
-            p.reflectionTransitionSize = t;
-            syncGradientUI();
-            this.renderCallback();
-        });
-
-        this.transitionPctSlider.addEventListener('input', e => {
-            const t = +e.target.value;
-            const { h, d } = solveHD(t, p.reflectionHighlightSize, 100 - 2 * p.reflectionHighlightSize - 4 * p.reflectionTransitionSize >> 1);
-            p.reflectionHighlightSize  = h;
-            p.reflectionTransitionSize = t;
-            syncGradientUI();
-            this.renderCallback();
-        });
 
         // (dark percent is display-only now, no slider listener)
         // ---------------------------------------------------------------------
 
-        // Gradient labels already synchronised by syncGradientUI()
+        // Gradient labels already synchronised by syncGradientUI() // Removed
         /* --------------------------------------------------------- */
     }
 
@@ -854,11 +844,19 @@ export class UIControls {
     }
 
     updateReflectionDerived(labelElem, params) {
-        // exit quietly if the label is not in the DOM
+        // This function might be obsolete now or can be removed if not used elsewhere.
+        // The new gradient slider updates its labels directly.
+        // If you still need it for some other purpose:
         if (!labelElem) { return; }
 
         const h = params.reflectionHighlightSize;
         const t = params.reflectionTransitionSize;
-        const used = 2 * h + 4 * t;
-        const d   = Math.max(0, (100 - used) / 2);
-        labelElem.textContent = d.toFixed(0);    }}
+        const val2h = h * 2;
+        const val4t = t * 4;
+        const d = Math.max(0, (100 - (val2h + val4t)) / 2.0); // d for one dark zone
+        // The labelElem here would correspond to one of the new labels if adapted.
+        // For example, if labelElem is gradientDVal, it should show 2*d.
+        // However, direct update in slider event is preferred.
+        // labelElem.textContent = (d * 2).toFixed(0); // Example if it were for 2d
+    }
+}

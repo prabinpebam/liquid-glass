@@ -11,6 +11,8 @@
     <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" href="data:,"> <!-- This line prevents the browser from requesting a favicon -->
     <link rel="stylesheet" href="css/style.css">
+    <!-- Add noUiSlider CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.css" rel="stylesheet">
 </head>
 <body>
     <div class="scene drop-zone">
@@ -186,25 +188,43 @@
             <hr class="separator">
             <h4>Gradient Layout (%)</h4>
 
-            <!-- Highlight % (2h) -->
+            <!-- Removed old Highlight % (2h) slider -->
+            <!--
             <div class="control-group">
                 <label for="highlightPctSlider">
                     Highlight 2h: <span id="highlightPctVal"></span> %
                 </label>
                 <input type="range" id="highlightPctSlider"  min="0" max="50" step="1">
             </div>
+            -->
 
-            <!-- Transition % (4t) -->
+            <!-- Removed old Transition % (4t) slider -->
+            <!--
             <div class="control-group">
                 <label for="transitionPctSlider">
                     Transition 4t: <span id="transitionPctVal"></span> %
                 </label>
                 <input type="range" id="transitionPctSlider" min="0" max="50" step="1">
             </div>
+            -->
 
-            <!-- Dark-zone display only -->
+            <!-- Removed old Dark-zone display only -->
+            <!--
             <div class="control-group">
                 <label>Dark 2d: <span id="darkPctVal">--</span> %</label>
+            </div>
+            -->
+
+            <!-- New Dual-Thumb Slider for Gradient Distribution -->
+            <!-- Make sure to include noUiSlider CSS in your project for proper styling -->
+            <div class="control-group">
+                <label>Gradient Distribution (Highlight | Transition | Dark)</label>
+                <div id="reflectionGradientSlider" class="noUi-target noUi-ltr noUi-horizontal noUi-txt-dir-ltr"></div>
+                <div class="gradient-readout" style="display: flex; justify-content: space-around; margin-top: 5px;">
+                    <span>2h: <span id="gradientHVal">--</span>%</span>
+                    <span>4t: <span id="gradientTVal">--</span>%</span>
+                    <span>2d: <span id="gradientDVal">--</span>%</span>
+                </div>
             </div>
 
         </div>
@@ -253,10 +273,8 @@
     <!-- Hidden file input for image upload -->
     <input type="file" id="imageUpload" accept="image/*" style="display: none;">
 
+    <!-- Add noUiSlider JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/noUiSlider/15.7.1/nouislider.min.js"></script>
     <script type="module" src="js/main.js"></script>
 </body>
-</html>
-    <script type="module" src="js/main.js"></script>
-</body>
-</html>
 </html>
