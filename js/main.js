@@ -18,26 +18,26 @@ class LiquidGlassApp {
         
         // Initialize parameters with "Thick oval" preset values
         this.liquidGlassParams = {
-            rectangleWidth: 333,
-            rectangleHeight: 195,
+            rectangleWidth: 375,
+            rectangleHeight: 197,
             rectangleCornerRadius: 144,
             edgeDistortionThickness: 29,
-            refractionStrength: 47.0,
-            gridSpacing: 25.0,
+            refractionStrength: 47,
+            gridSpacing: 25,
             glassBaseColor: [0.9803921568627451, 0.9803921568627451, 1, 0.1],
-            frostiness: 1.0,
+            frostiness: 1,
             showGrid: false,
             
             // Top Shadow
-            topShadowBlur: 60.0,
-            topShadowOffsetX: -14.0,
-            topShadowOffsetY: 21.0,
+            topShadowBlur: 60,
+            topShadowOffsetX: -14,
+            topShadowOffsetY: 21,
             topShadowOpacity: 0.5,
 
             // Bottom Glow
-            bottomGlowBlur: 30.0,
-            bottomGlowOffsetX: 31.0,
-            bottomGlowOffsetY: -15.0,
+            bottomGlowBlur: 30,
+            bottomGlowOffsetX: 31,
+            bottomGlowOffsetY: -15,
             bottomGlowOpacity: 0.3,
 
             // Chromatic Aberration
@@ -45,35 +45,19 @@ class LiquidGlassApp {
             chromaticAberrationAmount: 9.1,
 
             // Reflection
-            enableReflection: false,
-            // Removed legacy arc-based reflection params
-            // reflectionArcDegrees: 120.0,
-            // reflectionThickness: 20.0,
-            // reflectionOpacity: 40.0,
-            // reflectionArcPositionOffset: 0.0,
-            // reflectionOffset: 5.0
+            enableReflection: true,         
 
 
             // ─── NEW BORDER-REFLECTION PARAMETERS ───
-            reflectionBorderThickness: 8,   // px
-            reflectionBorderBlur:       4,  // px (0-10)
-            reflectionBorderOffset:     6,  // px   inside shape
-            reflectionStartAngle:       0,  // deg (0-360)
-
-            // Removed individual reflectionStop1-7, as they are derived
-            // gradient stop positions (percent 0-100)
-            // reflectionStop1: 0, // Removed
-            // reflectionStop2: 10, // Removed
-            // reflectionStop3: 40, // Removed
-            // reflectionStop4: 50, // Removed
-            // reflectionStop5: 60, // Removed
-            // reflectionStop6: 90, // Removed
-            // reflectionStop7: 100, // Removed
+            reflectionBorderThickness: 3,   // px
+            reflectionBorderBlur:       0,  // px (0-10)
+            reflectionBorderOffset:     0,  // px   inside shape
+            reflectionStartAngle:       76,  // deg (0-360)
 
             // NEW PARAMETERS FOR REFLECTION OVERLAY
             reflectionOverlayOpacity: 0.8,
-            reflectionHighlightSize:  10, // This is 'h'
-            reflectionTransitionSize: 15, // This is 't'
+            reflectionHighlightSize:  9, // This is 'h'
+            reflectionTransitionSize: 11.5, // This is 't'
 
             // Drop Shadow (NEW)
             dropShadowBlur:    20,
