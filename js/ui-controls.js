@@ -707,17 +707,48 @@ export class UIControls {
         }
     }
 
+    /* animated show / hide of reflection controls */
     updateReflectionControlsVisibility() {
-        // Toggle visibility of all control-groups inside the reflections tab
-        document.querySelectorAll('#tab-reflections .control-group').forEach(group => {
-            if (this.liquidGlassParams.enableReflection) {
-                group.style.maxHeight     = '100px';
-                group.style.opacity       = '1';
-                group.style.pointerEvents = 'auto';
+        const selector =
+            '#tab-reflections .control-group, ' +
+            '#tab-reflections hr.separator, ' +
+            '#tab-reflections h4:not(:first-of-type)';
+
+        const show = this.liquidGlassParams.enableReflection;
+
+        document.querySelectorAll(selector).forEach(el => {
+            // one-time preparation
+            if (!el._prepared) {
+                el.style.overflow    = 'hidden';
+                el.style.transition  = 'max-height 0.25s ease, opacity 0.25s ease';
+                el.style.willChange  = 'max-height, opacity';
+                el._prepared = true;
+            }
+
+            /* ---------- SHOW ---------- */
+            if (show) {
+                el.style.display = 'block';                // make it participate
+                // force re-flow to get proper scrollHeight
+                const h = el.scrollHeight;
+                el.style.maxHeight = h + 'px';
+                el.style.opacity   = '1';
+                el.style.pointerEvents = 'auto';
+
+            /* ---------- HIDE ---------- */
             } else {
-                group.style.maxHeight     = '0';
-                group.style.opacity       = '0';
-                group.style.pointerEvents = 'none';
+                // start collapse from current height
+                el.style.maxHeight = el.scrollHeight + 'px';
+                // allow above line to apply before collapsing
+                requestAnimationFrame(() => {
+                    el.style.maxHeight = '0';
+                    el.style.opacity   = '0';
+                    el.style.pointerEvents = 'none';
+                });
+                // after transition ends – remove from normal flow
+                if (!el._lh) {
+                    el._lh = () => { if (!this.liquidGlassParams.enableReflection) el.style.display = 'none'; };
+                    el.addEventListener('transitionend', el._lh);
+                }
             }
         });
     }
